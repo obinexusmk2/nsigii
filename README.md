@@ -12,6 +12,7 @@
 
 ## What is NSIGII?
 
+![./images/NSIGII_CLIScreenShoot_7April2026.png]( OBINexus Client ScreenShot)
 NSIGII is a tripartite consensus protocol that verifies and delivers resources across three constitutional channels before any irreversible action (FLASH) is committed. The three channels form a trident — each representing one pole of a magnetic bearing system:
 
 | Channel | Pole | Bearing | Port | Codec | Role |
@@ -85,7 +86,7 @@ FLASH is irreversible. It only commits when:
 
 ## MASMIC Magnetic Model
 
-The **MASMIC** (MMUKO — Machine Memory Using Knowledge Operations) model provides the semantic physics layer beneath the network protocol.
+The **MOASMIC** (MMUKO — Moasmic Machine Memory Using Knowledge Operations) model provides the semantic physics layer beneath the network protocol.
 
 ```
 nsigii.h         — Network protocol layer (channels, packets, RWX, WebSocket)

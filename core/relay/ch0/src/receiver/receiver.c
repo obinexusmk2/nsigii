@@ -160,22 +160,26 @@ int nsigii_receiver_decode_packet(nsigii_receiver_t* receiver,
         return -1;
     }
     
-    /* Decode from silicon representation */
+    /* Verify hash integrity BEFORE decode.
+     * The transmitter computes SHA-256 on the silicon-encoded content.
+     * We must verify against the same encoded bytes before decoding them
+     * back to suffering (plaintext).  Verifying after decode would always
+     * fail because the decoded bytes differ from the encoded bytes. */
+    if (!nsigii_receiver_verify_hash(&packet->payload)) {
+        fprintf(stderr, "Hash mismatch in receiver\n");
+        receiver->state = RECEIVER_STATE_ERROR;
+        return -1;
+    }
+
+    /* Decode from silicon representation (after hash is confirmed valid) */
     uint8_t decoded[MAX_CONTENT_SIZE];
     size_t decoded_len = MAX_CONTENT_SIZE;
-    
+
     if (nsigii_silicon_to_suffering_decode(packet->payload.content,
                                             packet->payload.content_length,
                                             decoded, &decoded_len) == 0) {
         memcpy(packet->payload.content, decoded, decoded_len);
         packet->payload.content_length = (uint32_t)decoded_len;
-    }
-    
-    /* Verify hash integrity */
-    if (!nsigii_receiver_verify_hash(&packet->payload)) {
-        fprintf(stderr, "Hash mismatch in receiver\n");
-        receiver->state = RECEIVER_STATE_ERROR;
-        return -1;
     }
     
     /* Set RWX: Receiver has READ permission */
