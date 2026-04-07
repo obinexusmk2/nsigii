@@ -1,0 +1,6 @@
+// ============================================================
+// settings.gradle — NSIGII Android Project
+// OBINexus Computing — Nnamdi Michael Okpala
+// ============================================================
+rootProject.name = "NSIGII"
+include ':app'

@@ -1,0 +1,601 @@
+// ============================================================================
+// OBIAI TIER MANAGEMENT SYSTEM
+// Stable / Experimental / Legacy Component Architecture
+// ============================================================================
+// Source: Ontological Bayesian Intelligence Architecture.pdf
+// ============================================================================
+
+MODULE OBIATierManagement
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE ComponentTier = (STABLE, EXPERIMENTAL, LEGACY)
+TYPE VersionString = STRING  // Format: v{major}.{minor}.{patch}
+TYPE DeploymentClearance = (PRODUCTION, DEVELOPMENT, AUDIT_ONLY, PROHIBITED)
+TYPE VerificationStatus = (VERIFIED, TESTING, ARCHIVED)
+
+CONSTANT STABLE_BRANCH : STRING = "v1.2.x"
+CONSTANT EXPERIMENTAL_BRANCH : STRING = "v1.5.x-1.6.x"
+CONSTANT LEGACY_BRANCH : STRING = "v0.x.x"
+
+// ---------------------------------------------------------------------------
+// DATA STRUCTURES
+// ---------------------------------------------------------------------------
+
+STRUCTURE ComponentVersion
+    major : INTEGER
+    minor : INTEGER
+    patch : INTEGER
+    
+    FUNCTION ToString() : VersionString
+        RETURN CONCATENATE("v", major, ".", minor, ".", patch)
+    END FUNCTION
+END STRUCTURE
+
+STRUCTURE OBIAIComponent
+    name : STRING
+    tier : ComponentTier
+    version : ComponentVersion
+    dependencies : LIST OF ComponentDependency
+    verification_status : VerificationStatus
+    deployment_clearance : DeploymentClearance
+    source_path : STRING
+    mathematical_proof : ProofDocument
+    test_coverage : REAL
+END STRUCTURE
+
+STRUCTURE ComponentDependency
+    component_name : STRING
+    required_version : VersionString
+    is_mandatory : BOOLEAN
+END STRUCTURE
+
+STRUCTURE TierCompatibilityMatrix
+    // Defines which tiers can interact
+    stable_to_stable : BOOLEAN
+    stable_to_experimental : BOOLEAN
+    stable_to_legacy : BOOLEAN
+    experimental_to_stable : BOOLEAN
+    experimental_to_experimental : BOOLEAN
+    experimental_to_legacy : BOOLEAN
+    legacy_to_stable : BOOLEAN
+    legacy_to_experimental : BOOLEAN
+    legacy_to_legacy : BOOLEAN
+END STRUCTURE
+
+STRUCTURE SwapperEngine
+    tier_isolation_enforcer : TierIsolationEnforcer
+    version_verifier : SemanticVersionVerifier
+    dependency_validator : DependencyChainValidator
+    safety_circuit_breaker : SafetyCircuitBreaker
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// STABLE TIER COMPONENTS
+// ---------------------------------------------------------------------------
+
+CLASS StableTierManager
+    // Production-verified components with mathematical proof validation
+    
+    PRIVATE components : LIST OF OBIAIComponent
+    
+    // AEGIS-PROOF-1.1: Cost-Knowledge Function
+    PUBLIC FUNCTION GetCostKnowledgeFunction() : OBIAIComponent
+        // Status: [STABLE] v1.1.0
+        // Mathematical Foundation: C(K_t, S) = H(S) * exp(-K_t / t)
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "AEGIS-PROOF-1.1: Cost-Knowledge Function",
+            tier = STABLE,
+            version = CREATE ComponentVersion(1, 1, 0),
+            dependencies = [],  // None
+            verification_status = VERIFIED,
+            deployment_clearance = PRODUCTION,
+            mathematical_proof = LoadProof("cost_knowledge_monotonicity.tex"),
+            test_coverage = 1.0
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    // AEGIS-PROOF-1.2: Traversal Cost Function
+    PUBLIC FUNCTION GetTraversalCostFunction() : OBIAIComponent
+        // Status: [STABLE] v1.2.0
+        // Mathematical Foundation: C(Node_i → Node_j) = α·KL(P_i || P_j) + β·ΔH(S)_{i,j}
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "AEGIS-PROOF-1.2: Traversal Cost Function",
+            tier = STABLE,
+            version = CREATE ComponentVersion(1, 2, 0),
+            dependencies = [
+                CREATE ComponentDependency(
+                    component_name = "AEGIS-PROOF-1.1",
+                    required_version = "v1.1.0",
+                    is_mandatory = TRUE
+                )
+            ],
+            verification_status = VERIFIED,
+            deployment_clearance = PRODUCTION,
+            mathematical_proof = LoadProof("traversal_cost_verification.tex"),
+            test_coverage = 1.0
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    // Swapper Engine Core
+    PUBLIC FUNCTION GetSwapperEngine() : OBIAIComponent
+        // Status: [STABLE] v2.0.0
+        // Function: Tier isolation enforcement and component compatibility validation
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Swapper Engine Core",
+            tier = STABLE,
+            version = CREATE ComponentVersion(2, 0, 0),
+            dependencies = [
+                CREATE ComponentDependency(
+                    component_name = "AEGIS-PROOF-1.2",
+                    required_version = "v1.2.0",
+                    is_mandatory = TRUE
+                )
+            ],
+            verification_status = VERIFIED,
+            deployment_clearance = PRODUCTION,
+            mathematical_proof = LoadProof("swapper_runtime_validation.tex"),
+            test_coverage = 0.98
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    PUBLIC FUNCTION ValidateStableComponent(component : OBIAIComponent) : BOOLEAN
+        // Validation criteria for Stable tier
+        
+        IF component.tier <> STABLE THEN
+            RETURN FALSE
+        END IF
+        
+        // Must have mathematical proof
+        IF component.mathematical_proof = NULL THEN
+            RETURN FALSE
+        END IF
+        
+        // Must have complete test coverage
+        IF component.test_coverage < 0.95 THEN
+            RETURN FALSE
+        END IF
+        
+        // All dependencies must be verified
+        FOR EACH dep IN component.dependencies DO
+            IF NOT IsDependencyVerified(dep) THEN
+                RETURN FALSE
+            END IF
+        END FOR
+        
+        RETURN TRUE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// EXPERIMENTAL TIER COMPONENTS
+// ---------------------------------------------------------------------------
+
+CLASS ExperimentalTierManager
+    // Development components under active testing and peer review
+    // Warning: Loaded in shadow-mode for testing only
+    
+    PRIVATE components : LIST OF OBIAIComponent
+    
+    // Triangle Convergence Logic
+    PUBLIC FUNCTION GetTriangleConvergence() : OBIAIComponent
+        // Status: [EXPERIMENTAL] v1.5.0
+        // Development Phase: Inverted triangle cost reasoning implementation
+        // Core Algorithm: S_k = {Node_j ∈ S_{k-1} | ImportCriticalCosts(Node_j) ≤ Threshold_k}
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Triangle Convergence Logic",
+            tier = EXPERIMENTAL,
+            version = CREATE ComponentVersion(1, 5, 0),
+            dependencies = [
+                CREATE ComponentDependency(
+                    component_name = "AEGIS-PROOF-1.2",
+                    required_version = "v1.2.0",
+                    is_mandatory = TRUE
+                )
+            ],
+            verification_status = TESTING,
+            deployment_clearance = DEVELOPMENT,
+            test_coverage = 0.75
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    // Uncertainty Handling Framework
+    PUBLIC FUNCTION GetUncertaintyFramework() : OBIAIComponent
+        // Status: [EXPERIMENTAL] v1.6.0
+        // Development Phase: Three-tier uncertainty classification
+        // Classification Zones: Known-Knowns, Known-Unknowns, Unknown-Unknowns
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Uncertainty Handling Framework",
+            tier = EXPERIMENTAL,
+            version = CREATE ComponentVersion(1, 6, 0),
+            dependencies = [
+                CREATE ComponentDependency(
+                    component_name = "Triangle Convergence",
+                    required_version = "v1.5.0",
+                    is_mandatory = TRUE
+                )
+            ],
+            verification_status = TESTING,
+            deployment_clearance = DEVELOPMENT,
+            test_coverage = 0.60
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    // Filter-Flash Integration
+    PUBLIC FUNCTION GetFilterFlashIntegration() : OBIAIComponent
+        // Status: [EXPERIMENTAL] v1.5.1
+        // Development Phase: Consciousness-aware inference triggering
+        // Integration Protocol: Filter/Flash threshold modulation with cost functions
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Filter-Flash Integration",
+            tier = EXPERIMENTAL,
+            version = CREATE ComponentVersion(1, 5, 1),
+            dependencies = [
+                CREATE ComponentDependency(
+                    component_name = "Triangle Convergence",
+                    required_version = "v1.5.0",
+                    is_mandatory = TRUE
+                )
+            ],
+            verification_status = TESTING,
+            deployment_clearance = DEVELOPMENT,
+            test_coverage = 0.70
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    PUBLIC FUNCTION LoadInShadowMode(component : OBIAIComponent) : ShadowComponent
+        // Experimental components loaded in shadow-mode for testing
+        
+        IF component.tier <> EXPERIMENTAL THEN
+            RAISE Error("Only EXPERIMENTAL components can be shadow-loaded")
+        END IF
+        
+        DECLARE shadow : ShadowComponent
+        shadow ← CREATE ShadowComponent(
+            original = component,
+            is_shadow = TRUE,
+            test_results = [],
+            validation_status = PENDING
+        )
+        
+        RETURN shadow
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// LEGACY TIER COMPONENTS
+// ---------------------------------------------------------------------------
+
+CLASS LegacyTierManager
+    // Archived components maintained for audit replay
+    // Security Notice: Cannot interact with active inference cycles
+    
+    PRIVATE components : LIST OF OBIAIComponent
+    
+    // Archived Proof Concepts
+    PUBLIC FUNCTION GetArchivedProofConcepts() : OBIAIComponent
+        // Status: [LEGACY] v0.x.x
+        // Archive Date: Pre-AEGIS validation framework
+        // Content: Initial mathematical explorations and proof-of-concept implementations
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Archived Proof Concepts",
+            tier = LEGACY,
+            version = CREATE ComponentVersion(0, 9, 9),
+            dependencies = [],
+            verification_status = ARCHIVED,
+            deployment_clearance = AUDIT_ONLY,
+            test_coverage = 0.0
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    // Historical Implementation Archive
+    PUBLIC FUNCTION GetHistoricalArchive() : OBIAIComponent
+        // Status: [LEGACY] v0.x.x
+        // Archive Date: Pre-component tier architecture
+        // Content: Deprecated algorithms and experimental approaches
+        
+        DECLARE component : OBIAIComponent
+        component ← CREATE OBIAIComponent(
+            name = "Historical Implementation Archive",
+            tier = LEGACY,
+            version = CREATE ComponentVersion(0, 8, 5),
+            dependencies = [],
+            verification_status = ARCHIVED,
+            deployment_clearance = AUDIT_ONLY,
+            test_coverage = 0.0
+        )
+        
+        RETURN component
+    END FUNCTION
+    
+    PUBLIC FUNCTION EnforceSecurityIsolation(component : OBIAIComponent) : BOOLEAN
+        // Strict sandboxing enforced for legacy components
+        
+        IF component.tier <> LEGACY THEN
+            RETURN FALSE
+        END IF
+        
+        // Create isolated sandbox
+        DECLARE sandbox : SecuritySandbox
+        sandbox ← CreateSandbox(component)
+        
+        // Disable all live inference integration
+        sandbox.DisableLiveInference()
+        
+        // Enable audit replay only
+        sandbox.EnableAuditReplay()
+        
+        RETURN TRUE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// TIER INTERACTION COMPATIBILITY
+// ---------------------------------------------------------------------------
+
+CLASS TierCompatibilityValidator
+    // Enforces tier interaction rules
+    
+    PRIVATE compatibility_matrix : TierCompatibilityMatrix
+    
+    PUBLIC FUNCTION InitializeCompatibilityMatrix()
+        compatibility_matrix ← CREATE TierCompatibilityMatrix(
+            //                    To:  Stable  Experimental  Legacy
+            // From:
+            stable_to_stable = TRUE,        // ✓ Production
+            stable_to_experimental = TRUE,  // ✓ Test Only
+            stable_to_legacy = FALSE,       // ✗ Prohibited
+            
+            experimental_to_stable = TRUE,  // ✓ Allowed
+            experimental_to_experimental = TRUE,  // ✓ Allowed
+            experimental_to_legacy = FALSE, // ✗ Prohibited
+            
+            legacy_to_stable = FALSE,       // ✗ Prohibited
+            legacy_to_experimental = FALSE, // ✗ Prohibited
+            legacy_to_legacy = TRUE         // . Audit Only
+        )
+    END FUNCTION
+    
+    PUBLIC FUNCTION CanInteract(
+        from_tier : ComponentTier,
+        to_tier : ComponentTier
+    ) : BOOLEAN
+        // Check if components from different tiers can interact
+        
+        CASE from_tier OF
+            STABLE:
+                CASE to_tier OF
+                    STABLE: RETURN compatibility_matrix.stable_to_stable
+                    EXPERIMENTAL: RETURN compatibility_matrix.stable_to_experimental
+                    LEGACY: RETURN compatibility_matrix.stable_to_legacy
+                END CASE
+                
+            EXPERIMENTAL:
+                CASE to_tier OF
+                    STABLE: RETURN compatibility_matrix.experimental_to_stable
+                    EXPERIMENTAL: RETURN compatibility_matrix.experimental_to_experimental
+                    LEGACY: RETURN compatibility_matrix.experimental_to_legacy
+                END CASE
+                
+            LEGACY:
+                CASE to_tier OF
+                    STABLE: RETURN compatibility_matrix.legacy_to_stable
+                    EXPERIMENTAL: RETURN compatibility_matrix.legacy_to_experimental
+                    LEGACY: RETURN compatibility_matrix.legacy_to_legacy
+                END CASE
+        END CASE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// SWAPPER ENGINE
+// ---------------------------------------------------------------------------
+
+CLASS SwapperEngineImplementation
+    // Tier isolation enforcement and component compatibility validation
+    
+    PRIVATE tier_isolation : TierIsolationEnforcer
+    PRIVATE version_verifier : SemanticVersionVerifier
+    PRIVATE dependency_validator : DependencyChainValidator
+    PRIVATE safety_breaker : SafetyCircuitBreaker
+    
+    // 1. Tier Isolation Enforcement
+    PUBLIC FUNCTION EnforceTierIsolation(
+        component_a : OBIAIComponent,
+        component_b : OBIAIComponent
+    ) : IsolationResult
+        // Runtime validation prevents cross-tier component interaction
+        
+        IF NOT CanInteract(component_a.tier, component_b.tier) THEN
+            safety_breaker.TriggerFallback()
+            RETURN CREATE IsolationResult(
+                allowed = FALSE,
+                violation = TIER_ISOLATION_BREACH
+            )
+        END IF
+        
+        RETURN CREATE IsolationResult(allowed = TRUE)
+    END FUNCTION
+    
+    // 2. Semantic Version Verification
+    PUBLIC FUNCTION VerifySemanticVersion(
+        component : OBIAIComponent,
+        required_version : VersionString
+    ) : Boolean
+        // Automated compatibility checking using semver signatures
+        
+        DECLARE current : ComponentVersion
+        current ← component.version
+        
+        DECLARE required : ComponentVersion
+        required ← ParseVersionString(required_version)
+        
+        // Check major version compatibility
+        IF current.major <> required.major THEN
+            RETURN FALSE
+        END IF
+        
+        // Check minimum minor version
+        IF current.minor < required.minor THEN
+            RETURN FALSE
+        END IF
+        
+        RETURN TRUE
+    END FUNCTION
+    
+    // 3. Dependency Chain Validation
+    PUBLIC FUNCTION ValidateDependencyChain(
+        component : OBIAIComponent
+    ) : ValidationResult
+        // Topological sorting with chronological constraints
+        
+        DECLARE dependency_graph : DirectedGraph
+        dependency_graph ← BuildDependencyGraph(component)
+        
+        // Check for cycles
+        IF HasCycle(dependency_graph) THEN
+            RETURN CREATE ValidationResult(
+                valid = FALSE,
+                error = CYCLIC_DEPENDENCY
+            )
+        END IF
+        
+        // Topological sort
+        DECLARE sorted : LIST OF OBIAIComponent
+        sorted ← TopologicalSort(dependency_graph)
+        
+        // Verify all dependencies are satisfied
+        FOR EACH dep IN component.dependencies DO
+            IF NOT IsDependencySatisfied(dep, sorted) THEN
+                RETURN CREATE ValidationResult(
+                    valid = FALSE,
+                    error = UNSATISFIED_DEPENDENCY,
+                    details = dep.component_name
+                )
+            END IF
+        END FOR
+        
+        RETURN CREATE ValidationResult(valid = TRUE)
+    END FUNCTION
+    
+    // 4. Safety Circuit Breaker
+    PUBLIC FUNCTION TriggerSafetyFallback()
+        // Automatic fallback to stable-only component stacks on tier violations
+        
+        DECLARE stable_manager : StableTierManager
+        stable_manager ← NEW StableTierManager()
+        
+        // Load only stable components
+        DECLARE stable_stack : ComponentStack
+        stable_stack ← stable_manager.GetAllStableComponents()
+        
+        // Replace current stack
+        ReplaceActiveStack(stable_stack)
+        
+        LogSafetyEvent("Fallback to stable-only stack triggered")
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// NON-COMMUTATIVE VERSION CONSTRAINTS
+// ---------------------------------------------------------------------------
+
+FUNCTION CheckNonCommutativeVersioning(
+    component_a : OBIAIComponent,
+    component_b : OBIAIComponent
+) : BOOLEAN
+    // V(component_a) + V(component_b) != V(component_b) + V(component_a)
+    // Loading order determines system behavior
+    
+    DECLARE load_order_ab : SystemState
+    load_order_ab ← SimulateLoadOrder(component_a, component_b)
+    
+    DECLARE load_order_ba : SystemState
+    load_order_ba ← SimulateLoadOrder(component_b, component_a)
+    
+    // States should be different (non-commutative)
+    RETURN (load_order_ab <> load_order_ba)
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// COST FUNCTION COMPONENT STATUS
+// ---------------------------------------------------------------------------
+
+FUNCTION GetCostFunctionStatus(component_name : STRING) : ComponentStatus
+    // Table 2: Cost Function Component Implementation Status
+    
+    CASE component_name OF
+        "Base Cost Function":
+            RETURN CREATE ComponentStatus(
+                tier = STABLE,
+                version = "v1.1.0",
+                validation = "Mathematically Verified"
+            )
+            
+        "KL Divergence Computation":
+            RETURN CREATE ComponentStatus(
+                tier = STABLE,
+                version = "v1.2.0",
+                validation = "Production Ready"
+            )
+            
+        "Fairness Penalty Logic":
+            RETURN CREATE ComponentStatus(
+                tier = EXPERIMENTAL,
+                version = "v1.5.0",
+                validation = "Under Testing"
+            )
+            
+        "Entropy Penalty System":
+            RETURN CREATE ComponentStatus(
+                tier = EXPERIMENTAL,
+                version = "v1.5.1",
+                validation = "Under Testing"
+            )
+            
+        "Consciousness Risk Assessment":
+            RETURN CREATE ComponentStatus(
+                tier = EXPERIMENTAL,
+                version = "v1.6.0",
+                validation = "Development Phase"
+            )
+            
+        DEFAULT:
+            RETURN CREATE ComponentStatus(
+                tier = LEGACY,
+                validation = "Unknown Component"
+            )
+    END CASE
+END FUNCTION
+
+END MODULE

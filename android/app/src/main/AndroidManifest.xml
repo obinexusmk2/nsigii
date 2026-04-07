@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml — NSIGII Tripartite Consensus Human Rights Protocol
+  OBINexus Computing — Nnamdi Michael Okpala
+
+  NSIGII is NOT a weapon. NOT a toy.
+  It is a constitutional human rights protocol for sustainable infrastructure:
+    Food, Water, Shelter — delivered free of charge.
+
+  Σ = (N − R) × K  →  machine bears suffering, not the person.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.obinexus.nsigii">
+
+    <!-- Network permissions for ch0/ch1/ch2 channel communication -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <!-- Sensor permissions for DriftSensor (accelerometer) and MarcoPolo (proximity) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Location for resource delivery routing (food/water/shelter) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Sensor features -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.NSIGII">
+
+        <!-- Main NSIGII Activity — MASMIC magnetic model entry point -->
+        <activity
+            android:name=".NSIGIIMainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

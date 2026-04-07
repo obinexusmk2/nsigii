@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  activity_main.xml — NSIGII Main Activity Layout
+  MASMIC Magnetic Memory Model Display
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"
+    android:padding="16dp">
+
+    <!-- NSIGII Status Header -->
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="NSIGII"
+        android:textColor="#39FF14"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/tv_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Human Rights Protocol — Food | Water | Shelter"
+        android:textColor="#CCCCCC"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Channel Status Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tv_ch0_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ch0\nUCHE\n255°"
+            android:textColor="#FF8C00"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:fontFamily="monospace"
+            android:background="#1A1A1A"
+            android:padding="8dp" />
+
+        <TextView
+            android:id="@+id/tv_ch1_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ch1\nEZE\n29°"
+            android:textColor="#4FC3F7"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:fontFamily="monospace"
+            android:background="#1A1A1A"
+            android:padding="8dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp" />
+
+        <TextView
+            android:id="@+id/tv_ch2_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ch2\nOBI\n265°"
+            android:textColor="#CE93D8"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:fontFamily="monospace"
+            android:background="#1A1A1A"
+            android:padding="8dp" />
+
+    </LinearLayout>
+
+    <!-- Radar View (phosphor-green display) -->
+    <com.obinexus.nsigii.RadarView
+        android:id="@+id/radar_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Consensus State -->
+    <TextView
+        android:id="@+id/tv_state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="STATE: PENDING"
+        android:textColor="#39FF14"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/tv_consensus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Consensus: NO (000)"
+        android:textColor="#CCCCCC"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/tv_suffering"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Σ = MAX"
+        android:textColor="#FF5252"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:fontFamily="monospace" />
+
+    <!-- MASMIC Magnetic Model Status -->
+    <TextView
+        android:id="@+id/tv_masmic"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MASMIC: ENCODED"
+        android:textColor="#FFB300"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:fontFamily="monospace"
+        android:layout_marginTop="4dp" />
+
+    <!-- Resource Type Selector -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btn_food"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="FOOD"
+            android:textSize="11sp"
+            android:backgroundTint="#2E7D32" />
+
+        <Button
+            android:id="@+id/btn_water"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="WATER"
+            android:textSize="11sp"
+            android:backgroundTint="#1565C0"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp" />
+
+        <Button
+            android:id="@+id/btn_shelter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SHELTER"
+            android:textSize="11sp"
+            android:backgroundTint="#4E342E" />
+
+    </LinearLayout>
+
+</LinearLayout>

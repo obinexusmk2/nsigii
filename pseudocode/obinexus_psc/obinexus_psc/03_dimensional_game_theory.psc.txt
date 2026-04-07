@@ -1,0 +1,565 @@
+// ============================================================================
+// DIMENSIONAL GAME THEORY FRAMEWORK
+// Strategic Algorithm Development for Multi-Domain Contexts
+// ============================================================================
+// Source: Dimensional_Game_Theory.pdf
+// ============================================================================
+
+MODULE DimensionalGameTheory
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE PlayerID = INTEGER
+TYPE ActionSet = SET OF Action
+TYPE PayoffValue = REAL
+TYPE Probability = REAL RANGE [0.0 .. 1.0]
+TYPE DimensionWeight = REAL RANGE [0.0 .. 1.0]
+
+CONSTANT DEFAULT_THRESHOLD : REAL = 0.5
+CONSTANT CONVERGENCE_EPSILON : REAL = 0.001
+CONSTANT MAX_ITERATIONS : INTEGER = 1000
+
+// ---------------------------------------------------------------------------
+// CORE GAME THEORY DEFINITIONS
+// ---------------------------------------------------------------------------
+
+STRUCTURE Game
+    players : SET OF PlayerID                    // N = {1, 2, ..., n}
+    action_spaces : MAP<PlayerID, ActionSet>     // A = A_1 × A_2 × ... × A_n
+    utility_functions : MAP<PlayerID, UtilityFunction>
+END STRUCTURE
+
+STRUCTURE Action
+    id : STRING
+    parameters : MAP<STRING, REAL>
+    metadata : ActionMetadata
+END STRUCTURE
+
+STRUCTURE Strategy
+    player : PlayerID
+    pure_action : Action          // For pure strategies
+    mixed_distribution : MAP<Action, Probability>  // For mixed strategies
+    is_mixed : BOOLEAN
+END STRUCTURE
+
+STRUCTURE StrategyProfile
+    strategies : MAP<PlayerID, Strategy>
+END STRUCTURE
+
+STRUCTURE UtilityFunction
+    player : PlayerID
+    evaluator : FUNCTION(StrategyProfile) : PayoffValue
+END STRUCTURE
+
+STRUCTURE NashEquilibrium
+    profile : StrategyProfile
+    is_valid : BOOLEAN
+    convergence_iterations : INTEGER
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// DIMENSIONAL GAME THEORY EXTENSIONS
+// ---------------------------------------------------------------------------
+
+STRUCTURE StrategicDimension
+    name : STRING
+    parameter_space : ParameterSpace
+    effectiveness_function : DimensionEffectivenessFunction
+END STRUCTURE
+
+STRUCTURE DimensionalStrategy
+    base_strategy : Strategy
+    optimized_dimension : StrategicDimension
+    dimension_effectiveness : REAL
+END STRUCTURE
+
+STRUCTURE DimensionEffectivenessFunction
+    evaluator : FUNCTION(Action, StrategicDimension) : REAL
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// NASH EQUILIBRIUM COMPUTATION
+// ---------------------------------------------------------------------------
+
+FUNCTION IsNashEquilibrium(
+    game : Game,
+    profile : StrategyProfile
+) : BOOLEAN
+    // A strategy profile s* = (s*_1, s*_2, ..., s*_n) is a Nash equilibrium
+    // if for each player i ∈ N and for all alternative strategies s_i ∈ A_i:
+    // u_i(s*_i, s*_{-i}) >= u_i(s_i, s*_{-i})
+    
+    FOR EACH player IN game.players DO
+        DECLARE current_strategy : Strategy
+        current_strategy ← profile.strategies[player]
+        
+        DECLARE current_payoff : PayoffValue
+        current_payoff ← EvaluateUtility(game, player, profile)
+        
+        // Check all alternative strategies
+        FOR EACH alternative_action IN game.action_spaces[player] DO
+            DECLARE alternative_strategy : Strategy
+            alternative_strategy ← CREATE Strategy(
+                player = player,
+                pure_action = alternative_action,
+                is_mixed = FALSE
+            )
+            
+            DECLARE test_profile : StrategyProfile
+            test_profile ← profile
+            test_profile.strategies[player] ← alternative_strategy
+            
+            DECLARE alternative_payoff : PayoffValue
+            alternative_payoff ← EvaluateUtility(game, player, test_profile)
+            
+            IF alternative_payoff > current_payoff + CONVERGENCE_EPSILON THEN
+                RETURN FALSE
+            END IF
+        END FOR
+    END FOR
+    
+    RETURN TRUE
+END FUNCTION
+
+FUNCTION EvaluateUtility(
+    game : Game,
+    player : PlayerID,
+    profile : StrategyProfile
+) : PayoffValue
+    // Evaluate utility for a player given a strategy profile
+    
+    DECLARE utility_func : UtilityFunction
+    utility_func ← game.utility_functions[player]
+    
+    RETURN utility_func.evaluator(profile)
+END FUNCTION
+
+FUNCTION ComputeNashEquilibrium(
+    game : Game,
+    initial_guess : StrategyProfile
+) : NashEquilibrium
+    // Iterative best-response algorithm
+    
+    DECLARE current_profile : StrategyProfile
+    current_profile ← initial_guess
+    
+    DECLARE iteration : INTEGER ← 0
+    
+    WHILE iteration < MAX_ITERATIONS DO
+        DECLARE updated : BOOLEAN ← FALSE
+        
+        FOR EACH player IN game.players DO
+            DECLARE best_response : Strategy
+            best_response ← ComputeBestResponse(game, player, current_profile)
+            
+            IF best_response <> current_profile.strategies[player] THEN
+                current_profile.strategies[player] ← best_response
+                updated ← TRUE
+            END IF
+        END FOR
+        
+        IF NOT updated THEN
+            // Converged
+            RETURN CREATE NashEquilibrium(
+                profile = current_profile,
+                is_valid = TRUE,
+                convergence_iterations = iteration
+            )
+        END IF
+        
+        iteration ← iteration + 1
+    END WHILE
+    
+    RETURN CREATE NashEquilibrium(
+        profile = current_profile,
+        is_valid = FALSE,
+        convergence_iterations = iteration
+    )
+END FUNCTION
+
+FUNCTION ComputeBestResponse(
+    game : Game,
+    player : PlayerID,
+    profile : StrategyProfile
+) : Strategy
+    // Find best response for player given others' strategies
+    
+    DECLARE best_action : Action
+    DECLARE best_payoff : PayoffValue ← -INFINITY
+    
+    FOR EACH action IN game.action_spaces[player] DO
+        DECLARE test_strategy : Strategy
+        test_strategy ← CREATE Strategy(
+            player = player,
+            pure_action = action,
+            is_mixed = FALSE
+        )
+        
+        DECLARE test_profile : StrategyProfile
+        test_profile ← profile
+        test_profile.strategies[player] ← test_strategy
+        
+        DECLARE payoff : PayoffValue
+        payoff ← EvaluateUtility(game, player, test_profile)
+        
+        IF payoff > best_payoff THEN
+            best_payoff ← payoff
+            best_action ← action
+        END IF
+    END FOR
+    
+    RETURN CREATE Strategy(
+        player = player,
+        pure_action = best_action,
+        is_mixed = FALSE
+    )
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// PERFECT GAME OUTCOME THEOREM
+// ---------------------------------------------------------------------------
+
+FUNCTION PerfectGameOutcome(
+    game : Game
+) : GameOutcome
+    // Theorem: In a two-player zero-sum game with complete information,
+    // if both players employ optimal strategies in all relevant dimensions,
+    // the game will result in a deterministic tie.
+    
+    // Verify zero-sum property
+    IF NOT IsZeroSumGame(game) THEN
+        RETURN CREATE GameOutcome(
+            is_deterministic = FALSE,
+            reason = NOT_ZERO_SUM
+        )
+    END IF
+    
+    // Compute optimal strategies using minimax
+    DECLARE player1_optimal : Strategy
+    DECLARE player2_optimal : Strategy
+    DECLARE game_value : PayoffValue
+    
+    game_value ← ComputeMinimaxValue(game)
+    player1_optimal ← ComputeMinimaxStrategy(game, 1)
+    player2_optimal ← ComputeMinimaxStrategy(game, 2)
+    
+    // Verify both play optimally
+    DECLARE profile : StrategyProfile
+    profile.strategies[1] ← player1_optimal
+    profile.strategies[2] ← player2_optimal
+    
+    DECLARE payoff1, payoff2 : PayoffValue
+    payoff1 ← EvaluateUtility(game, 1, profile)
+    payoff2 ← EvaluateUtility(game, 2, profile)
+    
+    // In zero-sum: payoff2 = -payoff1
+    // If optimal: payoff1 = game_value, payoff2 = -game_value
+    // Result: tie at (v, -v)
+    
+    RETURN CREATE GameOutcome(
+        is_deterministic = TRUE,
+        player1_payoff = payoff1,
+        player2_payoff = payoff2,
+        game_value = game_value,
+        is_tie = (ABS(payoff1 + payoff2) < CONVERGENCE_EPSILON)
+    )
+END FUNCTION
+
+FUNCTION ComputeMinimaxValue(game : Game) : PayoffValue
+    // max_{s1} min_{s2} u_1(s_1, s_2)
+    
+    DECLARE minimax_value : PayoffValue ← -INFINITY
+    
+    FOR EACH s1 IN game.action_spaces[1] DO
+        DECLARE min_payoff : PayoffValue ← INFINITY
+        
+        FOR EACH s2 IN game.action_spaces[2] DO
+            DECLARE profile : StrategyProfile
+            profile.strategies[1] ← CREATE Strategy(
+                player = 1, pure_action = s1, is_mixed = FALSE
+            )
+            profile.strategies[2] ← CREATE Strategy(
+                player = 2, pure_action = s2, is_mixed = FALSE
+            )
+            
+            DECLARE payoff : PayoffValue
+            payoff ← EvaluateUtility(game, 1, profile)
+            
+            IF payoff < min_payoff THEN
+                min_payoff ← payoff
+            END IF
+        END FOR
+        
+        IF min_payoff > minimax_value THEN
+            minimax_value ← min_payoff
+        END IF
+    END FOR
+    
+    RETURN minimax_value
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// DIMENSION DETECTION ALGORITHMS
+// ---------------------------------------------------------------------------
+
+FUNCTION IdentifyStrategicDimensions(
+    historical_data : LIST OF GameRecord
+) : SET OF StrategicDimension
+    // Algorithm 1: Dimension Identification
+    // Input: Historical game data H = {(s1_i, s2_i, o_i)}_{i=1}^m
+    // Output: Strategic dimension set D
+    
+    DECLARE dimension_set : SET OF StrategicDimension ← ∅
+    DECLARE feature_vectors : LIST OF Vector
+    
+    // Generate feature vectors from strategy differences
+    FOR i ← 1 TO LENGTH(historical_data) - 1 DO
+        FOR j ← i + 1 TO LENGTH(historical_data) DO
+            DECLARE s_i, s_j : Strategy
+            s_i ← historical_data[i].player1_strategy
+            s_j ← historical_data[j].player1_strategy
+            
+            DECLARE feature_vec : Vector
+            feature_vec ← ExtractFeatures(s_i, s_j)
+            feature_vectors.ADD(feature_vec)
+        END FOR
+    END FOR
+    
+    // Apply Principal Component Analysis
+    DECLARE principal_components : LIST OF Vector
+    principal_components ← PrincipalComponentAnalysis(feature_vectors)
+    
+    // Add significant components as dimensions
+    FOR EACH component IN principal_components DO
+        IF ComponentSignificance(component) > DEFAULT_THRESHOLD THEN
+            DECLARE dimension : StrategicDimension
+            dimension ← CreateDimensionFromComponent(component)
+            dimension_set.ADD(dimension)
+        END IF
+    END FOR
+    
+    RETURN dimension_set
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// STRATEGIC ADAPTATION ALGORITHMS
+// ---------------------------------------------------------------------------
+
+FUNCTION AdaptiveResponse(
+    game_state : GameState,
+    opponent_strategy_estimate : Strategy
+) : Strategy
+    // Algorithm 2: Adaptive Response
+    // Input: Current game state g, opponent strategy estimate s^_o
+    // Output: Weighted combination of counter-strategies
+    
+    // Identify dominant dimensions
+    DECLARE dominant_dimensions : SET OF StrategicDimension ← ∅
+    DECLARE all_dimensions : SET OF StrategicDimension
+    all_dimensions ← GetAllDimensions()
+    
+    FOR EACH dimension IN all_dimensions DO
+        DECLARE effectiveness : REAL
+        effectiveness ← EvaluateDimensionEffectiveness(
+            opponent_strategy_estimate,
+            dimension
+        )
+        
+        IF effectiveness > DEFAULT_THRESHOLD THEN
+            dominant_dimensions.ADD(dimension)
+        END IF
+    END FOR
+    
+    // Generate counter-strategies for each dominant dimension
+    DECLARE counter_strategies : LIST OF DimensionalStrategy
+    
+    FOR EACH dimension IN dominant_dimensions DO
+        DECLARE counter_strategy : DimensionalStrategy
+        counter_strategy ← GenerateCounterStrategy(dimension)
+        counter_strategies.ADD(counter_strategy)
+    END FOR
+    
+    // Combine counter-strategies with weights proportional to dimension dominance
+    RETURN CombineStrategiesWeighted(counter_strategies, dominant_dimensions)
+END FUNCTION
+
+FUNCTION GenerateCounterStrategy(
+    target_dimension : StrategicDimension
+) : DimensionalStrategy
+    // Generate strategy that maximizes effectiveness in counter-dimension
+    
+    DECLARE counter_dimension : StrategicDimension
+    counter_dimension ← GetCounterDimension(target_dimension)
+    
+    DECLARE optimal_action : Action
+    optimal_action ← OptimizeForDimension(counter_dimension)
+    
+    RETURN CREATE DimensionalStrategy(
+        base_strategy = CREATE Strategy(
+            pure_action = optimal_action,
+            is_mixed = FALSE
+        ),
+        optimized_dimension = counter_dimension,
+        dimension_effectiveness = 1.0
+    )
+END FUNCTION
+
+FUNCTION CombineStrategiesWeighted(
+    strategies : LIST OF DimensionalStrategy,
+    dimensions : SET OF StrategicDimension
+) : Strategy
+    // Combine strategies with dimension-based weighting
+    
+    DECLARE total_weight : REAL ← 0.0
+    DECLARE weights : MAP<DimensionalStrategy, REAL>
+    
+    // Calculate weights
+    FOR EACH strategy IN strategies DO
+        DECLARE weight : REAL
+        weight ← strategy.dimension_effectiveness
+        weights[strategy] ← weight
+        total_weight ← total_weight + weight
+    END FOR
+    
+    // Normalize and create mixed strategy
+    DECLARE mixed_dist : MAP<Action, Probability>
+    
+    FOR EACH strategy IN strategies DO
+        DECLARE normalized_weight : REAL
+        normalized_weight ← weights[strategy] / total_weight
+        
+        DECLARE action : Action
+        action ← strategy.base_strategy.pure_action
+        
+        mixed_dist[action] ← normalized_weight
+    END FOR
+    
+    RETURN CREATE Strategy(
+        mixed_distribution = mixed_dist,
+        is_mixed = TRUE
+    )
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// DOMAIN-SPECIFIC APPLICATIONS
+// ---------------------------------------------------------------------------
+
+CLASS FinancialMarketStrategy
+    // Trading dimensions: momentum, mean-reversion, liquidity-seeking
+    
+    PUBLIC FUNCTION DetectMarketRegime(
+        market_data : MarketDataStream
+    ) : MarketRegime
+        // Detect when market is dominated by momentum traders
+        
+        DECLARE momentum_score : REAL
+        DECLARE mean_rev_score : REAL
+        DECLARE liquidity_score : REAL
+        
+        momentum_score ← CalculateMomentumIndicator(market_data)
+        mean_rev_score ← CalculateMeanReversionIndicator(market_data)
+        liquidity_score ← CalculateLiquidityIndicator(market_data)
+        
+        IF momentum_score > mean_rev_score AND momentum_score > liquidity_score THEN
+            RETURN MOMENTUM_DOMINATED
+        ELSE IF mean_rev_score > momentum_score THEN
+            RETURN MEAN_REVERSION_DOMINATED
+        ELSE
+            RETURN LIQUIDITY_SEEKING
+        END IF
+    END FUNCTION
+END CLASS
+
+CLASS CybersecurityDefenseStrategy
+    // Attack dimensions: brute force, social engineering, zero-day
+    
+    PUBLIC FUNCTION DetectAttackDimension(
+        security_events : SecurityEventLog
+    ) : AttackDimension
+        // Identify attack dimensions and allocate defensive resources
+        
+        DECLARE brute_force_score : REAL
+        DECLARE social_eng_score : REAL
+        DECLARE zero_day_score : REAL
+        
+        brute_force_score ← AnalyzeBruteForcePatterns(security_events)
+        social_eng_score ← AnalyzeSocialEngineeringPatterns(security_events)
+        zero_day_score ← AnalyzeZeroDayIndicators(security_events)
+        
+        // Return dominant attack dimension for resource allocation
+        IF brute_force_score > social_eng_score AND brute_force_score > zero_day_score THEN
+            RETURN BRUTE_FORCE_DIMENSION
+        ELSE IF social_eng_score > brute_force_score THEN
+            RETURN SOCIAL_ENGINEERING_DIMENSION
+        ELSE
+            RETURN ZERO_DAY_DIMENSION
+        END IF
+    END FUNCTION
+END CLASS
+
+CLASS AutonomousVehicleStrategy
+    // Driver behavior dimensions: aggressiveness, risk-aversion
+    
+    PUBLIC FUNCTION ModelDriverBehavior(
+        vehicle_observations : SensorData
+    ) : DriverBehaviorProfile
+        // Model other drivers' behaviors along strategic dimensions
+        
+        DECLARE aggressiveness : REAL
+        DECLARE risk_aversion : REAL
+        
+        aggressiveness ← CalculateAggressivenessScore(vehicle_observations)
+        risk_aversion ← CalculateRiskAversionScore(vehicle_observations)
+        
+        RETURN CREATE DriverBehaviorProfile(
+            aggressiveness = aggressiveness,
+            risk_aversion = risk_aversion,
+            recommended_response = ComputeSafeResponse(
+                aggressiveness,
+                risk_aversion
+            )
+        )
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// STRATEGIC IMBALANCE DETECTION
+// ---------------------------------------------------------------------------
+
+FUNCTION DetectStrategicImbalance(
+    game : Game,
+    observed_outcome : GameOutcome
+) : ImbalanceReport
+    // Corollary: Non-tie outcome implies strategic imbalance
+    
+    DECLARE expected_outcome : GameOutcome
+    expected_outcome ← PerfectGameOutcome(game)
+    
+    IF NOT expected_outcome.is_tie THEN
+        RETURN CREATE ImbalanceReport(
+            has_imbalance = FALSE,
+            reason = NOT_PERFECT_GAME
+        )
+    END IF
+    
+    // Compare observed vs expected
+    IF ABS(observed_outcome.player1_payoff - expected_outcome.player1_payoff) > 
+       CONVERGENCE_EPSILON THEN
+        
+        // Imbalance detected - identify dimension
+        DECLARE imbalanced_dimension : StrategicDimension
+        imbalanced_dimension ← IdentifyImbalancedDimension(game, observed_outcome)
+        
+        RETURN CREATE ImbalanceReport(
+            has_imbalance = TRUE,
+            imbalanced_dimension = imbalanced_dimension,
+            exploitability = CalculateExploitability(imbalanced_dimension)
+        )
+    END IF
+    
+    RETURN CREATE ImbalanceReport(has_imbalance = FALSE)
+END FUNCTION
+
+END MODULE

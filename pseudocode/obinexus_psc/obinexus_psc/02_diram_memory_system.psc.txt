@@ -1,0 +1,480 @@
+// ============================================================================
+// DIRAM - DIRECTED INSTRUCTION RANDOM ACCESS MEMORY
+// Cryptographically Governed Memory Management System
+// ============================================================================
+// Source: Directed Instruction Random Access Memory.pdf
+// ============================================================================
+
+MODULE DIRAM_MemorySystem
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE MemoryAddress = POINTER TO BYTE
+TYPE AllocationSize = INTEGER RANGE [1 .. MAX_MEMORY]
+TYPE SHA256Hash = ARRAY[1..64] OF CHAR
+TYPE ProcessID = INTEGER
+TYPE EpochCounter = INTEGER RANGE [0 .. 255]
+
+CONSTANT MAX_HEAP_EVENTS : INTEGER = 3
+CONSTANT EPSILON_CONSTRAINT : REAL = 0.6
+CONSTANT SHA256_LENGTH : INTEGER = 64
+CONSTANT DETACH_TIMEOUT : INTEGER = 30  // seconds
+
+// Error Index Categories
+CONSTANT ERR_HEAP_VIOLATION : INTEGER = 0x1001
+CONSTANT ERR_MEMORY_EXHAUSTED : INTEGER = 0x1002
+CONSTANT ERR_PID_MISMATCH : INTEGER = 0x1003
+CONSTANT ERR_ZERO_TRUST_BREACH : INTEGER = 0x1004
+CONSTANT ERR_SHA_VERIFICATION_FAIL : INTEGER = 0x1005
+
+// ---------------------------------------------------------------------------
+// DATA STRUCTURES
+// ---------------------------------------------------------------------------
+
+STRUCTURE DIRAMAllocation
+    base_addr : MemoryAddress
+    size : AllocationSize
+    timestamp : UINT64
+    sha256_receipt : SHA256Hash
+    heap_events : EpochCounter
+    binding_pid : ProcessID
+    tag : STRING
+    is_active : BOOLEAN
+END STRUCTURE
+
+STRUCTURE MemorySpace
+    name : STRING
+    limit_bytes : INTEGER
+    current_usage : INTEGER
+    allocations : LIST OF DIRAMAllocation
+    guard_pages_enabled : BOOLEAN
+    canary_values_enabled : BOOLEAN
+    aslr_enabled : BOOLEAN
+END STRUCTURE
+
+STRUCTure EpochState
+    event_count : INTEGER
+    start_time : DATETIME
+    is_active : BOOLEAN
+END STRUCTURE
+
+STRUCTURE DIRAMConfiguration
+    memory_limit : INTEGER          // MB
+    memory_space : STRING
+    trace_enabled : BOOLEAN
+    log_dir : STRING
+    max_heap_events : INTEGER
+    detach_timeout : INTEGER
+    pid_binding : (STRICT, LOOSE)
+    guard_pages : BOOLEAN
+    canary_values : BOOLEAN
+    aslr_enabled : BOOLEAN
+    zero_trust : BOOLEAN
+    memory_audit : BOOLEAN
+    telemetry_level : INTEGER       // 0=disabled, 1=system, 2=opcode-bound
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// PREDICTIVE ALLOCATION ENGINE
+// ---------------------------------------------------------------------------
+
+CLASS PredictiveAllocationEngine
+    PRIVATE promise_cache : LIST OF AllocationPromise
+    PRIVATE lookahead_buffer : ARRAY[1..1024] OF PredictedAccess
+    
+    STRUCTURE AllocationPromise
+        predicted_size : AllocationSize
+        predicted_time : DATETIME
+        confidence : REAL
+        allocation_hint : STRING
+    END STRUCTURE
+    
+    STRUCTURE PredictedAccess
+        address_pattern : MemoryAddress
+        access_probability : REAL
+        predicted_timestamp : DATETIME
+    END STRUCTURE
+    
+    PUBLIC FUNCTION PredictAllocation(
+        algorithm_hint : STRING,
+        historical_pattern : AccessPattern
+    ) : AllocationPromise
+        // Anticipates future memory needs using async promises
+        // and lookahead strategies
+        
+        DECLARE prediction : AllocationPromise
+        DECLARE confidence_score : REAL
+        
+        confidence_score ← AnalyzeHistoricalPattern(historical_pattern)
+        
+        IF confidence_score > 0.7 THEN
+            prediction.predicted_size ← EstimateSize(algorithm_hint)
+            prediction.predicted_time ← NOW() + PREDICTION_WINDOW
+            prediction.confidence ← confidence_score
+            prediction.allocation_hint ← algorithm_hint
+            
+            promise_cache.ADD(prediction)
+        END IF
+        
+        RETURN prediction
+    END FUNCTION
+    
+    PUBLIC FUNCTION FulfillPromise(
+        promise : AllocationPromise
+    ) : DIRAMAllocation
+        // Pre-allocate memory based on predicted need
+        
+        IF promise.confidence >= 0.8 THEN
+            RETURN PreAllocate(promise.predicted_size, promise.allocation_hint)
+        ELSE
+            RETURN NULL
+        END IF
+    END FUNCTION
+    
+    PRIVATE FUNCTION AnalyzeHistoricalPattern(
+        pattern : AccessPattern
+    ) : REAL
+        // ML-based pattern analysis for prediction
+        
+        DECLARE temporal_correlation : REAL
+        DECLARE size_correlation : REAL
+        
+        temporal_correlation ← CalculateTemporalCorrelation(pattern)
+        size_correlation ← CalculateSizeCorrelation(pattern)
+        
+        RETURN (temporal_correlation + size_correlation) / 2.0
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// GOVERNED EVICTION SYSTEM
+// ---------------------------------------------------------------------------
+
+CLASS GovernedEviction
+    // Enforces runtime memory constraints ε(x) ≤ 0.6
+    // Allocations audited and evicted based on behavioral rules
+    
+    PRIVATE eviction_rules : LIST OF EvictionRule
+    
+    STRUCTURE EvictionRule
+        condition : FUNCTION(DIRAMAllocation) : BOOLEAN
+        priority : INTEGER
+        action : EvictionAction
+    END STRUCTURE
+    
+    TYPE EvictionAction = (DEFER, EVICT, AUDIT, ALERT)
+    
+    PUBLIC FUNCTION EvaluateForEviction(
+        allocation : DIRAMAllocation
+    ) : EvictionDecision
+        // Behavioral-based eviction, not just age or usage
+        
+        DECLARE behavioral_score : REAL
+        behavioral_score ← CalculateBehavioralScore(allocation)
+        
+        IF behavioral_score > EPSILON_CONSTRAINT THEN
+            RETURN CREATE EvictionDecision(
+                action = EVICT,
+                reason = BEHAVIORAL_CONSTRAINT_VIOLATION,
+                priority = HIGH
+            )
+        END IF
+        
+        FOR EACH rule IN eviction_rules DO
+            IF rule.condition(allocation) THEN
+                RETURN CREATE EvictionDecision(
+                    action = rule.action,
+                    priority = rule.priority
+                )
+            END IF
+        END FOR
+        
+        RETURN CREATE EvictionDecision(action = RETAIN)
+    END FUNCTION
+    
+    PRIVATE FUNCTION CalculateBehavioralScore(
+        allocation : DIRAMAllocation
+    ) : REAL
+        // ε(x) = events / max_events
+        
+        DECLARE epsilon : REAL
+        epsilon ← allocation.heap_events / MAX_HEAP_EVENTS
+        
+        RETURN epsilon
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// TRACEABLE MEMORY DYNAMICS
+// ---------------------------------------------------------------------------
+
+CLASS CryptographicMemoryTracer
+    // Tracks every allocation with SHA-256 receipts
+    // Enforces zero-trust boundaries
+    
+    PUBLIC FUNCTION GenerateReceipt(
+        addr : MemoryAddress,
+        size : AllocationSize,
+        pid : ProcessID
+    ) : SHA256Hash
+        // Generate cryptographic receipt for allocation
+        
+        DECLARE receipt_data : STRING
+        DECLARE timestamp : UINT64
+        
+        timestamp ← GetCurrentTimestamp()
+        receipt_data ← CONCATENATE(
+            TO_STRING(addr),
+            TO_STRING(size),
+            TO_STRING(timestamp),
+            TO_STRING(pid)
+        )
+        
+        RETURN SHA256_Hash(receipt_data)
+    END FUNCTION
+    
+    PUBLIC FUNCTION VerifyIntegrity(
+        allocation : DIRAMAllocation
+    ) : BOOLEAN
+        // Verify allocation hasn't been tampered with
+        
+        DECLARE computed_receipt : SHA256Hash
+        
+        computed_receipt ← GenerateReceipt(
+            allocation.base_addr,
+            allocation.size,
+            allocation.binding_pid
+        )
+        
+        RETURN (computed_receipt = allocation.sha256_receipt)
+    END FUNCTION
+    
+    PUBLIC FUNCTION ValidateZeroTrustBoundary(
+        allocation : DIRAMAllocation,
+        requesting_pid : ProcessID
+    ) : BOOLEAN
+        // Enforce zero-trust memory boundaries
+        
+        IF allocation.binding_pid <> requesting_pid THEN
+            LogSecurityEvent(ERR_PID_MISMATCH, allocation, requesting_pid)
+            RETURN FALSE
+        END IF
+        
+        IF NOT VerifyIntegrity(allocation) THEN
+            LogSecurityEvent(ERR_SHA_VERIFICATION_FAIL, allocation)
+            RETURN FALSE
+        END IF
+        
+        RETURN TRUE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// HEAP EVENT CONSTRAINTS (SINPHASE GOVERNANCE)
+// ---------------------------------------------------------------------------
+
+CLASS SinphaseGovernance
+    // ε(x) ≤ 0.6 constraint enforcement
+    
+    PRIVATE current_epoch : EpochState
+    
+    PUBLIC FUNCTION CheckConstraint() : BOOLEAN
+        // Maximum 3 heap events per command epoch
+        // Automatic epoch detection and counter reset
+        
+        DECLARE epsilon : REAL
+        epsilon ← current_epoch.event_count / MAX_HEAP_EVENTS
+        
+        RETURN (epsilon <= EPSILON_CONSTRAINT)
+    END FUNCTION
+    
+    PUBLIC FUNCTION RecordHeapEvent() : GovernanceResult
+        // Record heap event and check constraint
+        
+        current_epoch.event_count ← current_epoch.event_count + 1
+        
+        IF NOT CheckConstraint() THEN
+            // Constraint violation - defer allocation
+            RETURN CREATE GovernanceResult(
+                status = CONSTRAINT_VIOLATION,
+                action = DEFER_ALLOCATION,
+                error_code = ERR_HEAP_VIOLATION
+            )
+        END IF
+        
+        RETURN CREATE GovernanceResult(status = ALLOWED)
+    END FUNCTION
+    
+    PUBLIC FUNCTION ResetEpoch()
+        // Reset epoch counter
+        
+        current_epoch.event_count ← 0
+        current_epoch.start_time ← NOW()
+        current_epoch.is_active ← TRUE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// CORE DIRAM MANAGER
+// ---------------------------------------------------------------------------
+
+CLASS DIRAMManager
+    PRIVATE config : DIRAMConfiguration
+    PRIVATE allocations : MAP<MemoryAddress, DIRAMAllocation>
+    private predictive_engine : PredictiveAllocationEngine
+    PRIVATE eviction_manager : GovernedEviction
+    PRIVATE tracer : CryptographicMemoryTracer
+    PRIVATE governance : SinphaseGovernance
+    PRIVATE current_space : MemorySpace
+    
+    PUBLIC FUNCTION Allocate(
+        size : AllocationSize,
+        tag : STRING
+    ) : AllocationResult
+        // Main allocation entry point
+        
+        // 1. Check Sinphase governance constraint
+        DECLARE gov_result : GovernanceResult
+        gov_result ← governance.RecordHeapEvent()
+        
+        IF gov_result.status = CONSTRAINT_VIOLATION THEN
+            RETURN CREATE AllocationResult(
+                status = DEFERRED,
+                error = gov_result.error_code
+            )
+        END IF
+        
+        // 2. Check memory availability
+        IF (current_space.current_usage + size) > current_space.limit_bytes THEN
+            RETURN CREATE AllocationResult(
+                status = FAILED,
+                error = ERR_MEMORY_EXHAUSTED
+            )
+        END IF
+        
+        // 3. Perform allocation
+        DECLARE addr : MemoryAddress
+        addr ← SystemAllocate(size)
+        
+        // 4. Generate cryptographic receipt
+        DECLARE receipt : SHA256Hash
+        receipt ← tracer.GenerateReceipt(addr, size, GetCurrentPID())
+        
+        // 5. Create allocation record
+        DECLARE allocation : DIRAMAllocation
+        allocation ← CREATE DIRAMAllocation(
+            base_addr = addr,
+            size = size,
+            timestamp = GetCurrentTimestamp(),
+            sha256_receipt = receipt,
+            heap_events = governance.current_epoch.event_count,
+            binding_pid = GetCurrentPID(),
+            tag = tag,
+            is_active = TRUE
+        )
+        
+        // 6. Store allocation
+        allocations[addr] ← allocation
+        current_space.current_usage ← current_space.current_usage + size
+        
+        // 7. Log if tracing enabled
+        IF config.trace_enabled THEN
+            LogAllocationTrace(allocation)
+        END IF
+        
+        RETURN CREATE AllocationResult(
+            status = SUCCESS,
+            address = addr,
+            receipt = receipt
+        )
+    END FUNCTION
+    
+    PUBLIC FUNCTION Free(addr : MemoryAddress) : FreeResult
+        // Free allocated memory with verification
+        
+        IF NOT allocations.CONTAINS_KEY(addr) THEN
+            RETURN CREATE FreeResult(status = INVALID_ADDRESS)
+        END IF
+        
+        DECLARE allocation : DIRAMAllocation
+        allocation ← allocations[addr]
+        
+        // Verify zero-trust boundary
+        IF NOT tracer.ValidateZeroTrustBoundary(allocation, GetCurrentPID()) THEN
+            RETURN CREATE FreeResult(
+                status = SECURITY_VIOLATION,
+                error = ERR_ZERO_TRUST_BREACH
+            )
+        END IF
+        
+        // Perform deallocation
+        SystemFree(addr)
+        
+        // Update tracking
+        current_space.current_usage ← current_space.current_usage - allocation.size
+        allocation.is_active ← FALSE
+        
+        RETURN CREATE FreeResult(status = SUCCESS)
+    END FUNCTION
+    
+    PUBLIC FUNCTION GetAllocationTrace() : LIST OF DIRAMAllocation
+        // Return active allocations for tracing
+        
+        DECLARE active : LIST OF DIRAMAllocation
+        
+        FOR EACH alloc IN allocations.VALUES() DO
+            IF alloc.is_active THEN
+                active.ADD(alloc)
+            END IF
+        END FOR
+        
+        RETURN active
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// DETACHED DAEMON MODE
+// ---------------------------------------------------------------------------
+
+CLASS DIRAMDaemon
+    // Fork-safe detached execution
+    
+    PRIVATE is_detached : BOOLEAN
+    PRIVATE log_handlers : LogHandler
+    
+    PUBLIC FUNCTION StartDetachedMode(config_path : STRING) : DaemonStatus
+        // Start DIRAM in background daemon mode
+        
+        IF ForkProcess() > 0 THEN
+            // Parent process exits
+            EXIT
+        END IF
+        
+        // Child process continues as daemon
+        setsid()  // Create new session
+        
+        is_detached ← TRUE
+        
+        // Initialize logging
+        InitializeLogHandlers(config.log_dir)
+        
+        // Load configuration
+        LoadConfiguration(config_path)
+        
+        // Start main loop
+        WHILE is_detached DO
+            ProcessPendingAllocations()
+            Sleep(100)  // 100ms interval
+        END WHILE
+        
+        RETURN DAEMON_RUNNING
+    END FUNCTION
+    
+    PUBLIC FUNCTION StopDetachedMode()
+        is_detached ← FALSE
+    END FUNCTION
+END CLASS
+
+END MODULE

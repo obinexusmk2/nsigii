@@ -1,0 +1,512 @@
+// ============================================================================
+// EPISTEMIC ACTOR ARCHITECTURE
+// Bounded Rationality Through Mathematically Traceable Knowledge States
+// ============================================================================
+// Source: OBINexus Pre-Grant Gated Development Architecture.pdf
+// ============================================================================
+
+MODULE EpistemicActorArchitecture
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE KnowledgeState = (KNOWN_KNOWN, KNOWN_UNKNOWN, UNKNOWN_UNKNOWN)
+TYPE UncertaintyBound = REAL RANGE [0.0 .. 1.0]
+TYPE EvidenceStrength = REAL RANGE [0.0 .. 1.0]
+TYPE EpistemicVelocity = REAL
+
+CONSTANT MAX_EPISTEMIC_VELOCITY : REAL = 10.0
+CONSTANT EPISTEMIC_CONFIDENCE_THRESHOLD : REAL = 0.954
+
+// ---------------------------------------------------------------------------
+// EPISTEMIC ACTOR STRUCTURE
+// ---------------------------------------------------------------------------
+
+STRUCTURE EpistemicActor
+    // Three interconnected layers
+    knowledge_manifold : KnowledgeManifoldLayer
+    transition_validator : TransitionValidationLayer
+    action_binding : ActionBindingLayer
+    
+    current_state : EpistemicState
+    state_history : LIST OF EpistemicState
+    uncertainty_bounds : UncertaintyBounds
+END STRUCTURE
+
+STRUCTURE EpistemicState
+    beliefs : SET OF Belief
+    uncertainties : SET OF Uncertainty
+    evidence_basis : SET OF Evidence
+    confidence_level : REAL
+    timestamp : DATETIME
+END STRUCTURE
+
+STRUCTURE Belief
+    proposition : Proposition
+    confidence : REAL
+    evidence_support : LIST OF Evidence
+    derived_from : LIST OF Belief
+END STRUCTURE
+
+STRUCTURE Uncertainty
+    domain : String
+    bound : UncertaintyBound
+    reduction_strategy : Strategy
+END STRUCTURE
+
+STRUCTURE Evidence
+    source : String
+    strength : EvidenceStrength
+    timestamp : DATETIME
+    verification_status : VerificationStatus
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// KNOWLEDGE MANIFOLD LAYER
+// ---------------------------------------------------------------------------
+
+STRUCTURE KnowledgeManifoldLayer
+    // Topological representation of epistemic state space
+    // Each point represents specific configuration of beliefs, uncertainties, evidence
+    
+    state_space : TopologicalSpace
+    current_position : ManifoldPoint
+    reachable_regions : SET OF ManifoldRegion
+END STRUCTURE
+
+STRUCTURE ManifoldPoint
+    belief_coordinates : ARRAY OF REAL
+    uncertainty_coordinates : ARRAY OF REAL
+    evidence_coordinates : ARRAY OF REAL
+END STRUCTURE
+
+STRUCTURE ManifoldRegion
+    name : String
+    boundary : SET OF ManifoldPoint
+    entry_conditions : LIST OF Condition
+    exit_conditions : LIST OF Condition
+END STRUCTURE
+
+CLASS KnowledgeManifoldManager
+    PRIVATE manifold : KnowledgeManifoldLayer
+    
+    PUBLIC FUNCTION NavigateManifold(
+        target_state : EpistemicState
+    ) : NavigationResult
+        // Find path through manifold to target state
+        
+        DECLARE current : ManifoldPoint
+        current ← manifold.current_position
+        
+        DECLARE target : ManifoldPoint
+        target ← EpistemicStateToManifoldPoint(target_state)
+        
+        // Check if target is in reachable region
+        IF NOT IsReachable(current, target) THEN
+            RETURN CREATE NavigationResult(
+                success = FALSE,
+                reason = "Target state not reachable from current position"
+            )
+        END IF
+        
+        // Compute path
+        DECLARE path : LIST OF ManifoldPoint
+        path ← ComputeShortestPath(current, target)
+        
+        RETURN CREATE NavigationResult(
+            success = TRUE,
+            path = path,
+            path_length = LENGTH(path)
+        )
+    END FUNCTION
+    
+    PUBLIC FUNCTION GetCurrentRegion() : ManifoldRegion
+        // Determine which region of manifold currently occupies
+        
+        FOR EACH region IN manifold.reachable_regions DO
+            IF PointInRegion(manifold.current_position, region) THEN
+                RETURN region
+            END IF
+        END FOR
+        
+        RETURN NULL  // In undefined region
+    END FUNCTION
+    
+    PRIVATE FUNCTION IsReachable(
+        from : ManifoldPoint,
+        to : ManifoldPoint
+    ) : BOOLEAN
+        // Check if target is reachable through valid transitions
+        
+        DECLARE distance : REAL
+        distance ← ManifoldDistance(from, to)
+        
+        DECLARE max_valid_distance : REAL
+        max_valid_distance ← CalculateMaxValidDistance(from)
+        
+        RETURN distance <= max_valid_distance
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// TRANSITION VALIDATION LAYER
+// ---------------------------------------------------------------------------
+
+STRUCTURE TransitionValidationLayer
+    // Ensures movements through manifold follow logically coherent paths
+    // Prevents epistemic leaps that violate philosophical foundations
+    
+    coherence_rules : LIST OF CoherenceRule
+    velocity_constraints : VelocityConstraints
+    validation_history : LIST OF ValidationRecord
+END STRUCTURE
+
+STRUCTURE CoherenceRule
+    name : String
+    validator : FUNCTION(EpistemicState, EpistemicState) : BOOLEAN
+    violation_penalty : REAL
+END STRUCTURE
+
+STRUCTURE VelocityConstraints
+    max_belief_change : REAL
+    max_uncertainty_change : REAL
+    max_evidence_change : REAL
+END STRUCTURE
+
+CLASS TransitionValidator
+    PRIVATE validator : TransitionValidationLayer
+    
+    PUBLIC FUNCTION ValidateTransition(
+        from_state : EpistemicState,
+        to_state : EpistemicState
+    ) : ValidationResult
+        // Validate that transition maintains logical coherence
+        
+        // Check velocity constraints
+        DECLARE velocity : EpistemicVelocity
+        velocity ← CalculateEpistemicVelocity(from_state, to_state)
+        
+        IF velocity > MAX_EPISTEMIC_VELOCITY THEN
+            RETURN CREATE ValidationResult(
+                valid = FALSE,
+                violation = VELOCITY_EXCEEDED,
+                details = "Epistemic velocity: " + velocity
+            )
+        END IF
+        
+        // Check coherence rules
+        FOR EACH rule IN validator.coherence_rules DO
+            IF NOT rule.validator(from_state, to_state) THEN
+                RETURN CREATE ValidationResult(
+                    valid = FALSE,
+                    violation = COHERENCE_VIOLATION,
+                    rule_violated = rule.name
+                )
+            END IF
+        END FOR
+        
+        RETURN CREATE ValidationResult(valid = TRUE)
+    END FUNCTION
+    
+    PRIVATE FUNCTION CalculateEpistemicVelocity(
+        from_state : EpistemicState,
+        to_state : EpistemicState
+    ) : EpistemicVelocity
+        // Calculate rate of epistemic change
+        
+        DECLARE belief_change : REAL
+        belief_change ← BeliefSetDistance(from_state.beliefs, to_state.beliefs)
+        
+        DECLARE uncertainty_change : REAL
+        uncertainty_change ← ABS(
+            SUM(from_state.uncertainties) - SUM(to_state.uncertainties)
+        )
+        
+        DECLARE time_delta : REAL
+        time_delta ← to_state.timestamp - from_state.timestamp
+        
+        IF time_delta = 0 THEN
+            RETURN INFINITY
+        END IF
+        
+        RETURN (belief_change + uncertainty_change) / time_delta
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// ACTION BINDING LAYER
+// ---------------------------------------------------------------------------
+
+STRUCTURE ActionBindingLayer
+    // Translates epistemic states into physical actuator commands
+    // Ensures behavioral outputs consistent with knowledge limitations
+    
+    action_mappings : MAP<EpistemicState, ActionSet>
+    safety_constraints : LIST OF SafetyConstraint
+    binding_confidence_threshold : REAL
+END STRUCTURE
+
+STRUCTURE ActionSet
+    available_actions : SET OF Action
+    recommended_action : Action
+    forbidden_actions : SET OF Action
+END STRUCTURE
+
+STRUCTURE Action
+    name : String
+    parameters : MAP<String, Value>
+    required_confidence : REAL
+    risk_assessment : RiskAssessment
+END STRUCTURE
+
+STRUCTURE RiskAssessment
+    probability_of_harm : REAL
+    severity_of_harm : REAL
+    mitigation_strategies : LIST OF MitigationStrategy
+END STRUCTURE
+
+CLASS ActionBindingManager
+    PRIVATE binding_layer : ActionBindingLayer
+    
+    PUBLIC FUNCTION BindAction(
+        current_state : EpistemicState
+    ) : ActionBindingResult
+        // Translate epistemic state to appropriate action
+        
+        // Check confidence threshold
+        IF current_state.confidence_level < binding_layer.binding_confidence_threshold THEN
+            RETURN CREATE ActionBindingResult(
+                action_bound = FALSE,
+                reason = INSUFFICIENT_CONFIDENCE,
+                recommended_action = REQUEST_MORE_EVIDENCE
+            )
+        END IF
+        
+        // Get available actions for this state
+        DECLARE action_set : ActionSet
+        action_set ← GetActionSetForState(current_state)
+        
+        // Validate against safety constraints
+        FOR EACH action IN action_set.available_actions DO
+            IF IsActionSafe(action, current_state) THEN
+                RETURN CREATE ActionBindingResult(
+                    action_bound = TRUE,
+                    action = action,
+                    confidence = current_state.confidence_level
+                )
+            END IF
+        END FOR
+        
+        // No safe action available
+        RETURN CREATE ActionBindingResult(
+            action_bound = FALSE,
+            reason = NO_SAFE_ACTION,
+            recommended_action = DEFAULT_SAFE_ACTION
+        )
+    END FUNCTION
+    
+    PRIVATE FUNCTION IsActionSafe(
+        action : Action,
+        state : EpistemicState
+    ) : BOOLEAN
+        // Check if action is safe given epistemic state
+        
+        // Check required confidence
+        IF state.confidence_level < action.required_confidence THEN
+            RETURN FALSE
+        END IF
+        
+        // Check risk assessment
+        DECLARE risk : RiskAssessment
+        risk ← action.risk_assessment
+        
+        DECLARE risk_score : REAL
+        risk_score ← risk.probability_of_harm * risk.severity_of_harm
+        
+        IF risk_score > MAX_ACCEPTABLE_RISK THEN
+            RETURN FALSE
+        END IF
+        
+        // Check safety constraints
+        FOR EACH constraint IN binding_layer.safety_constraints DO
+            IF NOT constraint.IsSatisfied(action, state) THEN
+                RETURN FALSE
+            END IF
+        END FOR
+        
+        RETURN TRUE
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// EPISTEMIC INTEGRITY PRINCIPLES
+// ---------------------------------------------------------------------------
+
+CLASS EpistemicIntegrityGovernance
+    
+    // Coherence Principle
+    PUBLIC FUNCTION VerifyCoherence(
+        beliefs : SET OF Belief
+    ) : CoherenceResult
+        // All decisions must maintain logical consistency
+        // Prevents contradictory beliefs from coexisting
+        
+        FOR EACH belief1 IN beliefs DO
+            FOR EACH belief2 IN beliefs DO
+                IF belief1 <> belief2 THEN
+                    IF BeliefsContradict(belief1, belief2) THEN
+                        RETURN CREATE CoherenceResult(
+                            is_coherent = FALSE,
+                            contradiction = (belief1, belief2)
+                        )
+                    END IF
+                END IF
+            END FOR
+        END FOR
+        
+        RETURN CREATE CoherenceResult(is_coherent = TRUE)
+    END FUNCTION
+    
+    // Traceability Principle
+    PUBLIC FUNCTION VerifyTraceability(
+        decision : Decision,
+        evidence_basis : SET OF Evidence
+    ) : TraceabilityResult
+        // Every decision must be traceable through epistemic lineage
+        // to foundational evidence
+        
+        DECLARE required_evidence : SET OF Evidence
+        required_evidence ← decision.supporting_evidence
+        
+        FOR EACH evidence IN required_evidence DO
+            IF NOT evidence_basis.CONTAINS(evidence) THEN
+                RETURN CREATE TraceabilityResult(
+                    is_traceable = FALSE,
+                    missing_evidence = evidence
+                )
+            END IF
+        END FOR
+        
+        RETURN CREATE TraceabilityResult(is_traceable = TRUE)
+    END FUNCTION
+    
+    // Humility Principle
+    PUBLIC FUNCTION VerifyHumility(
+        state : EpistemicState
+    ) : HumilityResult
+        // Bounded rationality requires explicit recognition of uncertainty
+        // Maintain confidence intervals rather than absolute classifications
+        
+        DECLARE has_uncertainty_bounds : BOOLEAN
+        has_uncertainty_bounds ← (LENGTH(state.uncertainties) > 0)
+        
+        DECLARE confidence_not_absolute : BOOLEAN
+        confidence_not_absolute ← (state.confidence_level < 1.0)
+        
+        IF has_uncertainty_bounds AND confidence_not_absolute THEN
+            RETURN CREATE HumilityResult(
+                demonstrates_humility = TRUE,
+                uncertainty_count = LENGTH(state.uncertainties),
+                confidence_level = state.confidence_level
+            )
+        END IF
+        
+        RETURN CREATE HumilityResult(
+            demonstrates_humility = FALSE,
+            reason = INSUFFICIENT_UNCERTAINTY_ACKNOWLEDGMENT
+        )
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// ABNORMALITY DETECTION
+// ---------------------------------------------------------------------------
+
+CLASS AbnormalityDetectionSystem
+    
+    PUBLIC FUNCTION DetectTechnicalAbnormality(
+        system_metrics : SystemMetrics
+    ) : AbnormalityReport
+        // Technical abnormality detection
+        
+        // Epistemic state transitions exceeding velocity thresholds
+        IF system_metrics.epistemic_velocity > MAX_EPISTEMIC_VELOCITY THEN
+            TRIGGER SafetyProtocol(EPISTEMIC_VELOCITY_EXCEEDED)
+        END IF
+        
+        // Decision patterns diverging from training distributions
+        IF system_metrics.decision_divergence > DIVERGENCE_THRESHOLD THEN
+            TRIGGER EnhancedAuditProcedure()
+        END IF
+        
+        // Hardware sensors reporting outside calibrated ranges
+        FOR EACH sensor IN system_metrics.sensors DO
+            IF sensor.value < sensor.calibrated_min OR
+               sensor.value > sensor.calibrated_max THEN
+                TRIGGER DiagnosticRoutine(sensor)
+            END IF
+        END FOR
+        
+        RETURN GenerateAbnormalityReport(system_metrics)
+    END FUNCTION
+    
+    PUBLIC FUNCTION DetectProjectAbnormality(
+        project_metrics : ProjectMetrics
+    ) : AbnormalityReport
+        // Project health indicators
+        
+        // Code commit velocity below historical averages
+        IF project_metrics.commit_velocity < project_metrics.historical_avg_velocity THEN
+            SIGNAL PotentialTeamBurnout()
+        END IF
+        
+        // Stakeholder engagement rates declining
+        IF project_metrics.engagement_decline_rate > ENGAGEMENT_DECLINE_THRESHOLD THEN
+            SIGNAL RelationshipManagementIssue()
+        END IF
+        
+        // Budget burn rates accelerating
+        IF project_metrics.burn_rate_acceleration > BURN_RATE_THRESHOLD THEN
+            TRIGGER ResourceReviewProtocol()
+        END IF
+        
+        RETURN GenerateAbnormalityReport(project_metrics)
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// EPISTEMIC STATE CLASSIFICATION
+// ---------------------------------------------------------------------------
+
+FUNCTION ClassifyEpistemicState(
+    knowns : SET OF Knowledge,
+    unknowns : SET OF Unknown
+) : KnowledgeState
+    // Three-tier uncertainty classification
+    
+    DECLARE known_knowns : INTEGER ← 0
+    DECLARE known_unknowns : INTEGER ← 0
+    DECLARE unknown_unknowns : INTEGER ← 0
+    
+    FOR EACH item IN knowns DO
+        IF IsKnownKnown(item) THEN
+            known_knowns ← known_knowns + 1
+        ELSE IF IsKnownUnknown(item) THEN
+            known_unknowns ← known_unknowns + 1
+        END IF
+    END FOR
+    
+    // Unknown unknowns by definition cannot be counted directly
+    unknown_unknowns ← EstimateUnknownUnknowns(knowns, unknowns)
+    
+    IF known_unknowns > known_knowns THEN
+        RETURN KNOWN_UNKNOWN
+    ELSE IF unknown_unknowns > known_knowns THEN
+        RETURN UNKNOWN_UNKNOWN
+    ELSE
+        RETURN KNOWN_KNOWN
+    END IF
+END FUNCTION
+
+END MODULE

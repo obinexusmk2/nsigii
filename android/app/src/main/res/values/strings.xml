@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NSIGII</string>
+    <string name="channel_0_label">ch0 UCHE — Transmitter</string>
+    <string name="channel_1_label">ch1 EZE — Receiver</string>
+    <string name="channel_2_label">ch2 OBI — Verifier</string>
+    <string name="consensus_label">Consensus</string>
+    <string name="state_pending">PENDING</string>
+    <string name="state_loaded">LOADED</string>
+    <string name="state_filter">FILTER</string>
+    <string name="state_flash">FLASH</string>
+    <string name="state_done">DONE</string>
+    <string name="resource_food">FOOD</string>
+    <string name="resource_water">WATER</string>
+    <string name="resource_shelter">SHELTER</string>
+    <string name="suffering_label">Σ (Suffering)</string>
+    <string name="human_rights">Human Rights Protocol Active</string>
+</resources>

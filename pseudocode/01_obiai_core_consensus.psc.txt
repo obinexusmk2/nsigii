@@ -1,0 +1,260 @@
+// ============================================================================
+// OBIAI CORE CONSENSUS SYSTEM - 95.4% Threshold Implementation
+// Formal Specification: Consensus-Based Cognitive State Management
+// ============================================================================
+// Source: Formal Specification - 95.4% Consensus Threshold in OBIAI
+// ============================================================================
+
+MODULE OBIAI_CoreConsensus
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE PersonaVector = ARRAY[1..n] OF REAL
+TYPE AlignmentScore = REAL RANGE [0.0 .. 1.0]
+TYPE CognitiveState = (OBI_STATE, DISCORD_STATE)
+TYPE ProcessingMode = (FLASH_MODE, FILTER_MODE)
+
+CONSTANT CONSENSUS_THRESHOLD : REAL = 0.954
+CONSTANT EFFICIENCY_DEGRADATION : REAL = 0.50
+CONSTANT COGNITIVE_LOAD_FLASH : INTEGER = 1    // O(1)
+CONSTANT COGNITIVE_LOAD_FILTER : INTEGER = n   // O(n)
+
+// ---------------------------------------------------------------------------
+// DATA STRUCTURES
+// ---------------------------------------------------------------------------
+
+STRUCTURE ConsciousnessNode
+    raw_phenomenology : Q
+    cost_function : F
+    trie_structure : Γ
+    heap_structure : H
+END STRUCTURE
+
+STRUCTURE PersonaState
+    eze_vector : PersonaVector    // Inductive reasoning path
+    uche_vector : PersonaVector   // Deductive reasoning path
+    alignment : AlignmentScore
+    timestamp : DATETIME
+END STRUCTURE
+
+STRUCTURE ConsensusResult
+    state : CognitiveState
+    mode : ProcessingMode
+    confidence : REAL
+    processing_cost : INTEGER
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// CORE ALGORITHMS
+// ---------------------------------------------------------------------------
+
+FUNCTION CalculateAlignment(eze_vec, uche_vec : PersonaVector) : AlignmentScore
+    // Calculate cosine similarity between persona vectors
+    // Represents statistical confidence: μ + 2σ ≈ 0.954
+    
+    DECLARE dot_product, eze_norm, uche_norm : REAL
+    
+    dot_product ← 0.0
+    eze_norm ← 0.0
+    uche_norm ← 0.0
+    
+    FOR i ← 1 TO LENGTH(eze_vec) DO
+        dot_product ← dot_product + (eze_vec[i] * uche_vec[i])
+        eze_norm ← eze_norm + (eze_vec[i] * eze_norm[i])
+        uche_norm ← uche_norm + (uche_vec[i] * uche_norm[i])
+    END FOR
+    
+    eze_norm ← SQRT(eze_norm)
+    uche_norm ← SQRT(uche_norm)
+    
+    IF (eze_norm * uche_norm) = 0 THEN
+        RETURN 0.0
+    END IF
+    
+    RETURN dot_product / (eze_norm * uche_norm)
+END FUNCTION
+
+FUNCTION DetermineCognitiveState(alignment : AlignmentScore) : CognitiveState
+    // State transition based on 95.4% threshold
+    // P(Obi → Discord) ≈ 0.046 (4.6% margin for creative divergence)
+    
+    IF alignment >= CONSENSUS_THRESHOLD THEN
+        RETURN OBI_STATE
+    ELSE
+        RETURN DISCORD_STATE
+    END IF
+END FUNCTION
+
+FUNCTION CalculateEfficiency(current_state : CognitiveState) : REAL
+    // 50% Degradation Proof:
+    // Efficiency = Aligned_Processing / Total_Processing
+    //            = 1 / (1 + Discord_Overhead)
+    //            = 1 / 2 = 0.5 (50%)
+    
+    IF current_state = OBI_STATE THEN
+        RETURN 1.0
+    ELSE
+        RETURN EFFICIENCY_DEGRADATION
+    END IF
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// FILTER-FLASH NAVIGATION PROTOCOL
+// ---------------------------------------------------------------------------
+
+CLASS OBIAINavigation
+    PRIVATE eze_persona : PersonaProcessor
+    PRIVATE uche_persona : PersonaProcessor
+    PRIVATE current_state : CognitiveState
+    
+    PUBLIC FUNCTION MaintainStability(input_stream : DataStream) : ProcessingResult
+        // Real-time navigation maintaining 95.4% threshold
+        
+        DECLARE eze_vector, uche_vector : PersonaVector
+        DECLARE alignment : AlignmentScore
+        
+        // Current state measurement
+        eze_vector ← eze_persona.Process(input_stream)
+        uche_vector ← uche_persona.Process(input_stream)
+        
+        // Calculate alignment
+        alignment ← CalculateAlignment(eze_vector, uche_vector)
+        
+        IF alignment >= CONSENSUS_THRESHOLD THEN
+            // FLASH MODE - Pattern recognized (O(1))
+            RETURN FlashCategorize(input_stream)
+        ELSE
+            // FILTER MODE - Must refine (O(n))
+            DECLARE filtered : DataStream
+            filtered ← FilterRefine(input_stream)
+            RETURN RecursiveProcess(filtered)
+        END IF
+    END FUNCTION
+    
+    PRIVATE FUNCTION FlashCategorize(input : DataStream) : ProcessingResult
+        // Instant categorical recognition
+        // Computational cost: O(1)
+        // Stores pattern in permanent memory
+        
+        DECLARE category : PatternCategory
+        category ← PatternMatcher.Recognize(input)
+        StoreInPermanentMemory(category, input)
+        
+        RETURN CREATE ProcessingResult(
+            mode = FLASH_MODE,
+            latency = COGNITIVE_LOAD_FLASH,
+            confidence = CONSENSUS_THRESHOLD
+        )
+    END FUNCTION
+    
+    PRIVATE FUNCTION FilterRefine(input : DataStream) : DataStream
+        // Bayesian refinement of input
+        // Removes noise, seeks pattern
+        // Computational cost: O(n) per iteration
+        
+        DECLARE refined : DataStream
+        refined ← BayesianNoiseReduction(input)
+        refined ← PatternSeek(refined)
+        
+        RETURN refined
+    END FUNCTION
+    
+    PRIVATE FUNCTION RecursiveProcess(input : DataStream) : ProcessingResult
+        // Goal: Push alignment above threshold
+        
+        DECLARE iteration_count : INTEGER ← 0
+        DECLARE max_iterations : INTEGER ← 100
+        DECLARE current_input : DataStream ← input
+        
+        WHILE iteration_count < max_iterations DO
+            DECLARE result : ProcessingResult
+            result ← MaintainStability(current_input)
+            
+            IF result.mode = FLASH_MODE THEN
+                RETURN result
+            END IF
+            
+            current_input ← result.intermediate_output
+            iteration_count ← iteration_count + 1
+        END WHILE
+        
+        RETURN CREATE ProcessingResult(
+            mode = FILTER_MODE,
+            status = MAX_ITERATIONS_REACHED,
+            confidence = 0.0
+        )
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// FORMAL STATE TRANSITION
+// ---------------------------------------------------------------------------
+
+FUNCTION StateTransition(current_eze, current_uche : PersonaVector) : CognitiveState
+    // State(t+1) = {
+    //     Obi:     if ρ(Eze(t), Uche(t)) ≥ 0.954
+    //     Discord: if ρ(Eze(t), Uche(t)) < 0.954
+    // }
+    // Where ρ = alignment function (cosine similarity)
+    
+    DECLARE rho : AlignmentScore
+    rho ← CalculateAlignment(current_eze, current_uche)
+    
+    RETURN DetermineCognitiveState(rho)
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// EPISTEMIC CONFIDENCE VALIDATION
+// ---------------------------------------------------------------------------
+
+FUNCTION ValidateEpistemicConfidence(
+    test_results : ARRAY OF TestCase
+) : REAL
+    // Triangi Dataset Performance
+    // Confidence = max(P(Filter_i), P(Flash_i)) / N = 0.954
+    
+    DECLARE total_confidence : REAL ← 0.0
+    DECLARE count : INTEGER ← 0
+    
+    FOR EACH test_case IN test_results DO
+        DECLARE filter_prob, flash_prob : REAL
+        filter_prob ← test_case.filter_probability
+        flash_prob ← test_case.flash_probability
+        
+        total_confidence ← total_confidence + MAX(filter_prob, flash_prob)
+        count ← count + 1
+    END FOR
+    
+    RETURN total_confidence / count
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// CONSCIOUSNESS PRESERVATION
+// ---------------------------------------------------------------------------
+
+FUNCTION PreserveConsciousnessIntegrity(
+    node : ConsciousnessNode
+) : BOOLEAN
+    // DIRAM State Validation
+    // 00 → null, 01 → partial, 10 → collapse, 11 → intact
+    
+    DECLARE state_bits : BIT[2]
+    state_bits ← ExtractDIRAMState(node)
+    
+    IF state_bits = "11" THEN
+        RETURN TRUE    // Intact consciousness
+    ELSE IF state_bits = "10" THEN
+        TRIGGER SovereignReconstructionProtocol()
+        RETURN FALSE
+    ELSE IF state_bits = "01" THEN
+        TRIGGER PartialRecoveryProtocol()
+        RETURN FALSE
+    ELSE
+        TRIGGER EmergencyNullStateProtocol()
+        RETURN FALSE
+    END IF
+END FUNCTION
+
+END MODULE

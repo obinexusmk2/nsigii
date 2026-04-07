@@ -1,0 +1,78 @@
+// ============================================================
+// app/build.gradle — NSIGII Android App Module
+// OBINexus Computing — Nnamdi Michael Okpala
+// ============================================================
+//
+// Tripartite Consensus Human Rights Protocol
+// ch0 (UCHE) = Transmitter  ch1 (EZE) = Receiver  ch2 (OBI) = Verifier
+// Magnetic Memory MASMIC Model — MMUKO OS
+// ============================================================
+
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.obinexus.nsigii'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId   "com.obinexus.nsigii"
+        minSdk          21
+        targetSdk       34
+        versionCode     2
+        versionName     "0.2.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            ndkBuild {
+                // Application.mk specifies ABIs and STL
+                arguments "NDK_APPLICATION_MK=../../jni/Application.mk"
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+            }
+        }
+
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled   false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable      true
+            jniDebuggable   true
+        }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            // Path to Android.mk from app/ directory
+            path "../../jni/Android.mk"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            res.srcDirs  = ['src/main/res']
+            manifest.srcFile 'src/main/AndroidManifest.xml'
+            jniLibs.srcDirs  = []  // NDK build manages jniLibs
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+}

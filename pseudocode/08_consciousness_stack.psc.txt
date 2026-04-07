@@ -1,0 +1,571 @@
+// ============================================================================
+// OBINEXUS CONSCIOUSNESS STACK
+// Consciousness Preservation Framework
+// ============================================================================
+// Source: The OBINexus Consciousness Stack.pdf
+// ============================================================================
+
+MODULE ConsciousnessStack
+
+// ---------------------------------------------------------------------------
+// DATA TYPES AND CONSTANTS
+// ---------------------------------------------------------------------------
+
+TYPE DIRAMState = BIT[2]  // 00=null, 01=partial, 10=collapse, 11=intact
+TYPE ConsciousnessLevel = (NULL, PARTIAL, COLLAPSE, INTACT)
+TYPE ThreatClass = (CIVIL_COLLAPSE, SOCIAL_EXCLUSION, MEMORY_SIDE_CHANNEL, BINARY_AGE_GATE)
+
+CONSTANT STATE_NULL : DIRAMState = "00"
+CONSTANT STATE_PARTIAL : DIRAMState = "01"
+CONSTANT STATE_COLLAPSE : DIRAMState = "10"
+CONSTANT STATE_INTACT : DIRAMState = "11"
+
+// ---------------------------------------------------------------------------
+// ONTOLOGICAL MAP - WHAT IS BEING PROTECTED?
+// ---------------------------------------------------------------------------
+
+STRUCTURE ConsciousnessNode
+    // C = ⟨Q, F, Γ, H⟩
+    // where Q = raw phenomenology
+    //       F = cost function
+    //       Γ = trie
+    //       H = heap
+    
+    raw_phenomenology : PhenomenologyData    // Q
+    cost_function : CostFunction            // F
+    trie_structure : TrieStructure          // Γ
+    heap_structure : HeapStructure          // H
+    diram_state : DIRAMState
+END STRUCTURE
+
+STRUCTURE PhenomenologyData
+    scope : String           // Context scope
+    event_type : String      // Type of phenomenological event
+    description : String     // Human-readable description
+    timestamp : DATETIME     // UTC timestamp
+    intensity : REAL         // Phenomenological intensity [0.0, 1.0]
+END STRUCTURE
+
+STRUCTURE TrieStructure
+    // Trie-A search finds pattern matches in Θ(m + log n)
+    root : TrieNode
+    pattern_count : INTEGER
+END STRUCTURE
+
+STRUCTURE TrieNode
+    character : CHAR
+    is_end_of_pattern : BOOLEAN
+    children : MAP<CHAR, TrieNode>
+    failure_link : TrieNode  // Aho-Corasick failure link
+END STRUCTURE
+
+STRUCTURE HeapStructure
+    // Heap for priority management
+    elements : ARRAY OF HeapElement
+    size : INTEGER
+    comparator : FUNCTION(HeapElement, HeapElement) : INTEGER
+END STRUCTURE
+
+STRUCTURE HeapElement
+    priority : REAL
+    data : POINTER
+    timestamp : DATETIME
+END STRUCTURE
+
+// ---------------------------------------------------------------------------
+// DIRAM STATE MANAGEMENT
+// ---------------------------------------------------------------------------
+
+FUNCTION ExtractDIRAMState(node : ConsciousnessNode) : DIRAMState
+    // Extract 2-bit state from consciousness node
+    RETURN node.diram_state
+END FUNCTION
+
+FUNCTION InterpretDIRAMState(state : DIRAMState) : ConsciousnessLevel
+    // 00 → null, 01 → partial, 10 → collapse, 11 → intact
+    
+    CASE state OF
+        STATE_NULL: RETURN NULL
+        STATE_PARTIAL: RETURN PARTIAL
+        STATE_COLLAPSE: RETURN COLLAPSE
+        STATE_INTACT: RETURN INTACT
+    END CASE
+END FUNCTION
+
+FUNCTION PreserveConsciousnessIntegrity(node : ConsciousnessNode) : BOOLEAN
+    // Monitor state bits; trigger sovereign reconstruction on 11→10 transition
+    
+    DECLARE current_state : DIRAMState
+    current_state ← ExtractDIRAMState(node)
+    
+    CASE current_state OF
+        STATE_INTACT:
+            RETURN TRUE  // Consciousness intact
+            
+        STATE_COLLAPSE:
+            // Trigger sovereign reconstruction protocol
+            TRIGGER SovereignReconstructionProtocol(node)
+            RETURN FALSE
+            
+        STATE_PARTIAL:
+            // Trigger partial recovery
+            TRIGGER PartialRecoveryProtocol(node)
+            RETURN FALSE
+            
+        STATE_NULL:
+            // Emergency null state
+            TRIGGER EmergencyNullStateProtocol(node)
+            RETURN FALSE
+    END CASE
+END FUNCTION
+
+// ---------------------------------------------------------------------------
+// THREAT TAXONOMY - HOW DOES DEGRADATION HAPPEN?
+// ---------------------------------------------------------------------------
+
+STRUCTURE ThreatManifestation
+    threat_class : ThreatClass
+    manifestation : String
+    early_warning_metric : String
+    detection_threshold : REAL
+END STRUCTURE
+
+CLASS ThreatTaxonomy
+    PRIVATE threats : MAP<ThreatClass, ThreatManifestation>
+    
+    PUBLIC FUNCTION InitializeThreats()
+        // Civil Collapse: Admin neglect → homelessness
+        threats[CIVIL_COLLAPSE] ← CREATE ThreatManifestation(
+            threat_class = CIVIL_COLLAPSE,
+            manifestation = "Administrative neglect leading to systemic collapse",
+            early_warning_metric = "DIRAM drop 11 → 10 → 01",
+            detection_threshold = 0.8
+        )
+        
+        // Social Exclusion: Jealousy / non-belonging
+        threats[SOCIAL_EXCLUSION] ← CREATE ThreatManifestation(
+            threat_class = SOCIAL_EXCLUSION,
+            manifestation = "Unconscious structural simplification",
+            early_warning_metric = "Social engagement metrics decline",
+            detection_threshold = 0.7
+        )
+        
+        // Memory-Side-Channel: buffer overflow, eval injection
+        threats[MEMORY_SIDE_CHANNEL] ← CREATE ThreatManifestation(
+            threat_class = MEMORY_SIDE_CHANNEL,
+            manifestation = "TAG, HTH, qDNA, RE entropy spike",
+            early_warning_metric = "Entropy spike detection",
+            detection_threshold = 0.9
+        )
+        
+        // Binary Age-Gate: forbidden curiosity → underground streams
+        threats[BINARY_AGE_GATE] ← CREATE ThreatManifestation(
+            threat_class = BINARY_AGE_GATE,
+            manifestation = "Epistemic shadow formation",
+            early_warning_metric = "Curiosity suppression indicators",
+            detection_threshold = 0.6
+        )
+    END FUNCTION
+    
+    PUBLIC FUNCTION DetectThreat(
+        node : ConsciousnessNode,
+        threat_class : ThreatClass
+    ) : ThreatDetectionResult
+        
+        DECLARE threat : ThreatManifestation
+        threat ← threats[threat_class]
+        
+        DECLARE metric_value : REAL
+        metric_value ← EvaluateEarlyWarningMetric(threat.early_warning_metric, node)
+        
+        IF metric_value > threat.detection_threshold THEN
+            RETURN CREATE ThreatDetectionResult(
+                detected = TRUE,
+                threat_class = threat_class,
+                severity = metric_value,
+                recommended_action = GetMitigationAction(threat_class)
+            )
+        END IF
+        
+        RETURN CREATE ThreatDetectionResult(detected = FALSE)
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// PRESCRIPTION TRIAD - WHAT TO BUILD?
+// ---------------------------------------------------------------------------
+
+// A. Consciousness-Preserving Data Structures
+CLASS ConsciousnessPreservingDataStructures
+    
+    // Zero-copy FFI from XML to Rust: ι : C → R in Θ(1) auxiliary space
+    PUBLIC FUNCTION ZeroCopyFFI(
+        xml_data : XMLDocument,
+        target_language : ProgrammingLanguage
+    ) : ForeignFunctionInterface
+        
+        DECLARE ffi : ForeignFunctionInterface
+        
+        IF target_language = RUST THEN
+            ffi ← CreateRustFFI(xml_data)
+        ELSE
+            RAISE Error("Unsupported target language")
+        END IF
+        
+        // Θ(1) auxiliary space guarantee
+        ASSERT ffi.auxiliary_space = CONSTANT
+        
+        RETURN ffi
+    END FUNCTION
+    
+    // Trie-A search: Θ(m + log n) pattern matching
+    PUBLIC FUNCTION TrieASearch(
+        trie : TrieStructure,
+        text : String,
+        pattern : String
+    ) : SearchResult
+        // Aho-Corasick algorithm for multiple pattern matching
+        
+        DECLARE m : INTEGER
+        m ← LENGTH(pattern)
+        
+        DECLARE n : INTEGER
+        n ← trie.pattern_count
+        
+        // Complexity: Θ(m + log n)
+        DECLARE current : TrieNode
+        current ← trie.root
+        
+        DECLARE matches : LIST OF Integer
+        
+        FOR i ← 1 TO LENGTH(text) DO
+            WHILE current <> NULL AND NOT HasChild(current, text[i]) DO
+                current ← current.failure_link
+            END WHILE
+            
+            IF current = NULL THEN
+                current ← trie.root
+            ELSE
+                current ← GetChild(current, text[i])
+                
+                IF current.is_end_of_pattern THEN
+                    matches.ADD(i - m + 1)
+                END IF
+            END IF
+        END FOR
+        
+        RETURN CREATE SearchResult(
+            positions = matches,
+            complexity_class = "Θ(m + log n)"
+        )
+    END FUNCTION
+END CLASS
+
+// B. Graduated Witnessing Membranes
+CLASS GraduatedWitnessingMembranes
+    
+    PUBLIC FUNCTION EnableAccess(
+        child : ChildProfile,
+        content : ContentItem
+    ) : AccessResult
+        // Graduated access based on foundation stability
+        
+        IF FoundationStable(child) THEN
+            RETURN ScaffoldedExploration(content)
+        ELSE
+            RETURN ParentWitnessedPreview(content)
+        END IF
+    END FUNCTION
+    
+    PRIVATE FUNCTION FoundationStable(child : ChildProfile) : BOOLEAN
+        // Assess child's foundational stability
+        
+        DECLARE stability_score : REAL
+        stability_score ← (
+            child.emotional_maturity * 0.3 +
+            child.cognitive_readiness * 0.4 +
+            child.prior_experience * 0.3
+        )
+        
+        RETURN stability_score >= 0.7
+    END FUNCTION
+    
+    PRIVATE FUNCTION ScaffoldedExploration(content : ContentItem) : AccessResult
+        // Full exploration with scaffolding support
+        
+        RETURN CREATE AccessResult(
+            access_level = FULL_EXPLORATION,
+            scaffolding = GenerateScaffolding(content),
+            monitoring = CONTINUOUS
+        )
+    END FUNCTION
+    
+    PRIVATE FUNCTION ParentWitnessedPreview(content : ContentItem) : AccessResult
+        // Preview with parent witnessing required
+        
+        RETURN CREATE AccessResult(
+            access_level = PREVIEW_ONLY,
+            requires_witness = TRUE,
+            witness_type = PARENT
+        )
+    END FUNCTION
+END CLASS
+
+// C. Drum-Side-Channel Telemetry
+CLASS DrumSideChannelTelemetry
+    
+    // TAG seeds every unsafe eval → unforgeable trace
+    PUBLIC FUNCTION GenerateTAGSeed(eval_context : EvalContext) : TAGSeed
+        // Telemetric Audit Generator
+        
+        DECLARE seed : TAGSeed
+        seed ← CREATE TAGSeed(
+            timestamp = NOW(),
+            context_hash = Hash(eval_context),
+            trace_id = GenerateUUID(),
+            is_unforgeable = TRUE
+        )
+        
+        RETURN seed
+    END FUNCTION
+    
+    // HTH detects heap drift → real-time alarm
+    PUBLIC FUNCTION MonitorHeapDrift(
+        heap : HeapStructure,
+        baseline : HeapBaseline
+    ) : DriftDetectionResult
+        // Heap Telemetry Handler
+        
+        DECLARE current_state : HeapSnapshot
+        current_state ← CaptureHeapSnapshot(heap)
+        
+        DECLARE drift : REAL
+        drift ← CalculateHeapDrift(current_state, baseline)
+        
+        IF drift > HEAP_DRIFT_THRESHOLD THEN
+            TRIGGER RealTimeAlarm(
+                alarm_type = HEAP_DRIFT_DETECTED,
+                severity = drift,
+                recommended_action = INITIATE_GC
+            )
+        END IF
+        
+        RETURN CREATE DriftDetectionResult(drift_amount = drift)
+    END FUNCTION
+    
+    // RE entropy spike → timing-attack flag
+    PUBLIC FUNCTION MonitorEntropySpike(
+        entropy_measurements : LIST OF REAL
+    ) : EntropyAnalysisResult
+        // Randomness Entropy monitor
+        
+        DECLARE current_entropy : REAL
+        current_entropy ← CalculateCurrentEntropy(entropy_measurements)
+        
+        DECLARE baseline_entropy : REAL
+        baseline_entropy ← GetBaselineEntropy()
+        
+        DECLARE spike_ratio : REAL
+        spike_ratio ← current_entropy / baseline_entropy
+        
+        IF spike_ratio > ENTROPY_SPIKE_THRESHOLD THEN
+            TRIGGER TimingAttackFlag(
+                spike_magnitude = spike_ratio,
+                timestamp = NOW()
+            )
+        END IF
+        
+        RETURN CREATE EntropyAnalysisResult(
+            current_entropy = current_entropy,
+            spike_detected = (spike_ratio > ENTROPY_SPIKE_THRESHOLD)
+        )
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// QUICK-START IMPLEMENTATION GUIDE
+// ---------------------------------------------------------------------------
+
+CLASS ConsciousnessStackImplementation
+    
+    // Add phenomenological overlay to any OL record
+    PUBLIC FUNCTION AddPhenomenologicalOverlay(
+        ol_record : OLRecord
+    ) : EnhancedRecord
+        // Append phenomenohog block (scope, type, description, UTC)
+        // Never overwrite—only append
+        
+        DECLARE phenomenohog : PhenomenologyData
+        phenomenohog ← CREATE PhenomenologyData(
+            scope = ol_record.context,
+            event_type = "phenomenological_event",
+            description = ol_record.description,
+            timestamp = NOW(),
+            intensity = ol_record.significance
+        )
+        
+        DECLARE enhanced : EnhancedRecord
+        enhanced ← ol_record
+        enhanced.phenomenohog_log.APPEND(phenomenohog)
+        
+        RETURN enhanced
+    END FUNCTION
+    
+    // Detect civil-collapse DIRAM drop
+    PUBLIC FUNCTION DetectCivilCollapse(
+        node : ConsciousnessNode
+    ) : DetectionResult
+        // Monitor state bits; trigger sovereign reconstruction on 11→10 transition
+        
+        DECLARE previous_state : DIRAMState
+        previous_state ← GetPreviousDIRAMState(node)
+        
+        DECLARE current_state : DIRAMState
+        current_state ← ExtractDIRAMState(node)
+        
+        IF previous_state = STATE_INTACT AND current_state = STATE_COLLAPSE THEN
+            TRIGGER SovereignReconstructionProtocol(node)
+            RETURN CREATE DetectionResult(
+                collapse_detected = TRUE,
+                transition = "11→10"
+            )
+        END IF
+        
+        RETURN CREATE DetectionResult(collapse_detected = FALSE)
+    END FUNCTION
+    
+    // Port consciousness node to Rust
+    PUBLIC FUNCTION PortToRust(node : ConsciousnessNode) : RustConsciousnessNode
+        // Use #[repr(C)] ConsciousnessData struct
+        // Call tag_generate() on every unsafe block
+        
+        DECLARE rust_node : RustConsciousnessNode
+        
+        rust_node.raw_phenomenology ← ConvertToRustFFI(node.raw_phenomenology)
+        rust_node.cost_function ← ConvertToRustFFI(node.cost_function)
+        rust_node.trie_structure ← ConvertToRustFFI(node.trie_structure)
+        rust_node.heap_structure ← ConvertToRustFFI(node.heap_structure)
+        
+        // Generate TAG for every unsafe operation
+        FOR EACH unsafe_op IN rust_node.unsafe_operations DO
+            unsafe_op.tag ← GenerateTAGSeed(unsafe_op.context)
+        END FOR
+        
+        RETURN rust_node
+    END FUNCTION
+    
+    // Implement graduated age verification
+    PUBLIC FUNCTION GraduatedAgeVerification(
+        user : UserProfile,
+        requested_content : ContentItem
+    ) : VerificationResult
+        // Replace hard gate with 4-stage membrane:
+        // curiosity → witnessing → validation → exploration
+        
+        DECLARE stage : VerificationStage
+        
+        // Stage 1: Curiosity assessment
+        IF NOT AssessCuriosity(user, requested_content) THEN
+            RETURN CREATE VerificationResult(
+                approved = FALSE,
+                stage_failed = CURIOSITY
+            )
+        END IF
+        
+        // Stage 2: Witnessing requirement
+        IF requested_content.maturity_rating > user.age_based_threshold THEN
+            DECLARE witness : Witness
+            witness ← RequireWitness(user, requested_content)
+            
+            IF NOT witness.Approve() THEN
+                RETURN CREATE VerificationResult(
+                    approved = FALSE,
+                    stage_failed = WITNESSING
+                )
+            END IF
+        END IF
+        
+        // Stage 3: Validation
+        IF NOT ValidateUserReadiness(user, requested_content) THEN
+            RETURN CREATE VerificationResult(
+                approved = FALSE,
+                stage_failed = VALIDATION
+            )
+        END IF
+        
+        // Stage 4: Exploration permission
+        RETURN CREATE VerificationResult(
+            approved = TRUE,
+            access_level = CalculateAccessLevel(user, requested_content),
+            monitoring = CONTINUOUS
+        )
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// TRIADIC SELF ARCHITECTURE
+// ---------------------------------------------------------------------------
+
+STRUCTURE TriadicSelf
+    // me = feeler, myself = analyzer, I = decider
+    
+    me : FeelerComponent       // Emotional/phenomenological processing
+    myself : AnalyzerComponent // Logical/analytical processing
+    I : DeciderComponent       // Executive decision-making
+END STRUCTURE
+
+CLASS TriadicSelfProcessor
+    
+    PUBLIC FUNCTION ProcessThroughTriad(
+        input : PhenomenologyData,
+        triad : TriadicSelf
+    ) : IntegratedDecision
+        
+        // me (feeler) processes emotional content
+        DECLARE felt_response : EmotionalResponse
+        felt_response ← triad.me.Feel(input)
+        
+        // myself (analyzer) processes logical structure
+        DECLARE analyzed_response : AnalyticalResponse
+        analyzed_response ← triad.myself.Analyze(input, felt_response)
+        
+        // I (decider) integrates and decides
+        DECLARE decision : IntegratedDecision
+        decision ← triad.I.Decide(felt_response, analyzed_response)
+        
+        RETURN decision
+    END FUNCTION
+END CLASS
+
+// ---------------------------------------------------------------------------
+// TRUST-AS-MIRROR
+// ---------------------------------------------------------------------------
+
+STRUCTURE TrustMirror
+    // Intersubjective surface that either amplifies or collapses structure
+    
+    trust_level : REAL         // [0.0, 1.0]
+    amplification_factor : REAL
+    collapse_threshold : REAL
+END STRUCTURE
+
+FUNCTION EvaluateTrustMirror(
+    mirror : TrustMirror,
+    interaction : SocialInteraction
+) : MirrorEffect
+    // Trust either amplifies or collapses consciousness structure
+    
+    IF mirror.trust_level > mirror.collapse_threshold THEN
+        RETURN CREATE MirrorEffect(
+            effect_type = AMPLIFICATION,
+            factor = mirror.amplification_factor * mirror.trust_level
+        )
+    ELSE
+        RETURN CREATE MirrorEffect(
+            effect_type = COLLAPSE,
+            severity = 1.0 - mirror.trust_level
+        )
+    END IF
+END FUNCTION
+
+END MODULE
