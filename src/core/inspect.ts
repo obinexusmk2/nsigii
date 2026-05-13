@@ -13,6 +13,7 @@ export interface InspectResult {
   footer: NSIGIIFooter;
   channelTableOffset: number;
   segmentTableOffset: number;
+  verificationOffset?: number;
   payloadOffset: number;
   payloadSize: number;
 }
@@ -84,7 +85,9 @@ export function inspectFile(inputPath: string): InspectResult {
     segments.push({ segmentId, channelId, timestampNs, payloadOffset: segPayloadOffset, payloadSize: segPayloadSize, payloadHash: segPayloadHash, rwxFlags, state: byteToClass(stateByte) });
   }
 
-  off = segmentTableOffset + TRIDENT_SEGMENT_COUNT * SEGMENT_ENTRY_SIZE;
+  const verificationOffset = segmentTableOffset + TRIDENT_SEGMENT_COUNT * SEGMENT_ENTRY_SIZE;
+  validateOffset("verificationOffset", verificationOffset, buf.length);
+  off = verificationOffset;
   const vSegmentId = Number(buf.readBigUInt64LE(off)); off += 8;
   const vTransmitHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
   const vReceiveHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
@@ -104,7 +107,7 @@ export function inspectFile(inputPath: string): InspectResult {
   const signature = buf.toString("utf8", off, off + 64).replace(/\0/g, "") || undefined;
   const footer: NSIGIIFooter = { segmentCount: fSegmentCount, finalHash, signature };
 
-  return { header, channels, segments, verification, footer, channelTableOffset, segmentTableOffset, payloadOffset, payloadSize };
+  return { header, channels, segments, verification, footer, channelTableOffset, segmentTableOffset, verificationOffset, payloadOffset, payloadSize };
 }
 
 function validateOffset(name: string, offset: number, length: number): void {
