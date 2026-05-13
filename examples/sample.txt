@@ -1,0 +1,14 @@
+NSIGII Constitutional Verification Container — Sample Payload
+This file demonstrates the NSIGII wrap/inspect/verify/extract flow.
+
+Philosophy:
+- Linkable Then Executable
+- Verification before interpretation
+- Trident channel consensus
+- Format agnostic containers
+
+Run:
+  nsigii wrap examples/sample.txt
+  nsigii inspect examples/sample.txt.nsigii
+  nsigii verify examples/sample.txt.nsigii
+  nsigii extract examples/sample.txt.nsigii
