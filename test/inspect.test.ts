@@ -35,6 +35,29 @@ describe("inspect", () => {
     expect(info.verification.consensusScore).toBe(1.0);
     expect(info.verification.humanRightsTag).toBe("VERIFY");
   });
+
+  it("preserves full-length hex hashes across container metadata", () => {
+    const info = inspectFile(container);
+    const hex64 = /^[a-f0-9]{64}$/;
+
+    expect(info.header.payloadHash).toMatch(hex64);
+    expect(info.header.payloadHash).toHaveLength(64);
+
+    for (const segment of info.segments) {
+      expect(segment.payloadHash).toMatch(hex64);
+      expect(segment.payloadHash).toHaveLength(64);
+    }
+
+    expect(info.verification.transmitHash).toMatch(hex64);
+    expect(info.verification.receiveHash).toMatch(hex64);
+    expect(info.verification.verifyHash).toMatch(hex64);
+    expect(info.verification.transmitHash).toHaveLength(64);
+    expect(info.verification.receiveHash).toHaveLength(64);
+    expect(info.verification.verifyHash).toHaveLength(64);
+
+    expect(info.footer.finalHash).toMatch(hex64);
+    expect(info.footer.finalHash).toHaveLength(64);
+  });
   it("parses a wrapped text file with a payload offset inside the container", () => {
     const info = inspectFile(textContainer);
     const generated = readFileSync(textContainer);

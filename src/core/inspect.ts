@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { NSIGII_MAGIC } from "../constants.js";
+import { HASH_HEX_LENGTH } from "../format/header.js";
+import { SEGMENT_ENTRY_SIZE, TRIDENT_SEGMENT_COUNT } from "../format/segment.js";
 import type { NSIGIIHeader, NSIGIIChannel, NSIGIISegment, NSIGIIVerification, NSIGIIFooter } from "../types.js";
 
 export interface InspectResult {
@@ -41,7 +43,7 @@ export function inspectFile(inputPath: string): InspectResult {
   validateOffset("segmentTableOffset", segmentTableOffset, buf.length);
   validateOffset("payloadOffset", payloadOffset, buf.length);
   validatePayloadBounds("payload", payloadOffset, payloadSize, buf.length);
-  const payloadHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
+  const payloadHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
   const fileId = buf.toString("utf8", off, off + 64).replace(/\0/g, ""); off += 64;
   const createdAt = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
   const originalFilename = buf.toString("utf8", off, off + 128).replace(/\0/g, ""); off += 128;
@@ -60,14 +62,14 @@ export function inspectFile(inputPath: string): InspectResult {
     const id = buf.readUInt8(off++) as 0 | 1 | 2;
     const roleLen = buf.readUInt8(off++);
     const role = buf.toString("utf8", off, off + roleLen); off += roleLen;
-    const hash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
+    const hash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
     const stateByte = buf.readUInt8(off++);
     channels.push({ id, role: role as any, hash, state: byteToClass(stateByte) });
   }
 
   off = segmentTableOffset;
   const segments: NSIGIISegment[] = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < TRIDENT_SEGMENT_COUNT; i++) {
     const segmentId = Number(buf.readBigUInt64LE(off)); off += 8;
     const channelId = buf.readUInt8(off++) as 0 | 1 | 2;
     const timestampNs = Number(buf.readBigUInt64LE(off)); off += 8;
@@ -75,18 +77,18 @@ export function inspectFile(inputPath: string): InspectResult {
     const segPayloadSize = Number(buf.readBigUInt64LE(off)); off += 8;
     validateOffset(`segment ${segmentId} payloadOffset`, segPayloadOffset, buf.length);
     validatePayloadBounds(`segment ${segmentId} payload`, segPayloadOffset, segPayloadSize, buf.length);
-    const segPayloadHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
+    const segPayloadHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
     const rwxFlags = buf.readUInt8(off++);
     const stateByte = buf.readUInt8(off++);
     off += 2;
     segments.push({ segmentId, channelId, timestampNs, payloadOffset: segPayloadOffset, payloadSize: segPayloadSize, payloadHash: segPayloadHash, rwxFlags, state: byteToClass(stateByte) });
   }
 
-  off = segmentTableOffset + 3 * 71;
+  off = segmentTableOffset + TRIDENT_SEGMENT_COUNT * SEGMENT_ENTRY_SIZE;
   const vSegmentId = Number(buf.readBigUInt64LE(off)); off += 8;
-  const vTransmitHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
-  const vReceiveHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
-  const vVerifyHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
+  const vTransmitHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
+  const vReceiveHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
+  const vVerifyHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
   const consensusByte = buf.readUInt8(off++);
   const consensusScore = buf.readFloatLE(off); off += 4;
   const hrByte = buf.readUInt8(off++); off += 7;
@@ -96,9 +98,9 @@ export function inspectFile(inputPath: string): InspectResult {
   };
 
   off = footerPos;
- off += 8;
+  off += 8;
   const fSegmentCount = Number(buf.readBigUInt64LE(off)); off += 8;
-  const finalHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
+  const finalHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
   const signature = buf.toString("utf8", off, off + 64).replace(/\0/g, "") || undefined;
   const footer: NSIGIIFooter = { segmentCount: fSegmentCount, finalHash, signature };
 

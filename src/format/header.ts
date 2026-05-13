@@ -1,6 +1,8 @@
 import { writeUInt8, writeUInt32LE, writeUInt64LE, writeString, readUInt8, readUInt32LE, readUInt64LE, readString } from "../utils/bytes.js";
 import type { NSIGIIHeader, NSIGIIFormatHint } from "../types.js";
 
+export const HASH_HEX_LENGTH = 64;
+
 export interface SerializedHeader {
   buffer: Buffer;
   headerSize: number;
@@ -29,7 +31,7 @@ export function serializeHeader(h: NSIGIIHeader): SerializedHeader {
   off = writeUInt64LE(buf, off, 0);
   const payloadOffsetPos = off;
   off = writeUInt64LE(buf, off, 0);
-  off = writeString(buf, off, h.payloadHash, 32);
+  off = writeString(buf, off, h.payloadHash, HASH_HEX_LENGTH);
   off = writeString(buf, off, h.fileId, 64);
   off = writeString(buf, off, h.createdAt, 32);
   off = writeString(buf, off, h.originalFilename ?? "", 128);
@@ -54,7 +56,7 @@ export function deserializeHeader(buf: Buffer): NSIGIIHeader {
   off += 8; // channel table offset
   off += 8; // segment table offset
   off += 8; // payload offset
-  const [payloadHash] = readString(buf, off, 32); off += 32;
+  const [payloadHash] = readString(buf, off, HASH_HEX_LENGTH); off += HASH_HEX_LENGTH;
   const [fileId] = readString(buf, off, 64); off += 64;
   const [createdAt] = readString(buf, off, 32); off += 32;
   const [orig] = readString(buf, off, 128); off += 128;
