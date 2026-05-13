@@ -1,4 +1,4 @@
-import { writeUInt8, writeUInt32LE, writeUInt64LE, writeString, readUInt8, readUInt64LE, readString } from "../utils/bytes.js";
+import { writeUInt8, writeUInt32LE, writeUInt64LE, writeString, readUInt8, readUInt32LE, readUInt64LE, readString } from "../utils/bytes.js";
 import type { NSIGIIHeader, NSIGIIFormatHint } from "../types.js";
 
 export interface SerializedHeader {
@@ -48,12 +48,12 @@ export function deserializeHeader(buf: Buffer): NSIGIIHeader {
   const [pat] = readUInt8(buf, off); off += 1;
   const [fmt] = readUInt8(buf, off); off += 1;
   off += 1;
-  // const [headerSize] = readUInt32LE(buf, off); off += 4;
+  const [, nextOff] = readUInt32LE(buf, off); off = nextOff;
   const [payloadSize] = readUInt64LE(buf, off); off += 8;
-  // const [channelCount] = readUInt8(buf, off); off += 1;
-  // const [cto] = readUInt64LE(buf, off); off += 8;
-  // const [sto] = readUInt64LE(buf, off); off += 8;
-  // const [po] = readUInt64LE(buf, off); off += 8;
+  off += 1; // channel count
+  off += 8; // channel table offset
+  off += 8; // segment table offset
+  off += 8; // payload offset
   const [payloadHash] = readString(buf, off, 32); off += 32;
   const [fileId] = readString(buf, off, 64); off += 64;
   const [createdAt] = readString(buf, off, 32); off += 32;

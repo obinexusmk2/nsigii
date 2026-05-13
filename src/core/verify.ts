@@ -13,8 +13,7 @@ export function verifyFile(inputPath: string): NSIGIIVerifyResult {
   const recomputedPayloadHash = sha256(payload);
   const payloadHashMatch = recomputedPayloadHash === info.header.payloadHash;
 
-  const channelsStart = info.channels.length > 0 ? buf.indexOf(Buffer.from(info.channels[0].role), 7) : 0;
-  const channelsBuf = buf.subarray(channelsStart, info.payloadOffset);
+  const channelsBuf = buf.subarray(info.channelTableOffset, info.segmentTableOffset);
   const recomputedFinalHash = computeFileHash(payload, sha256Buffer(channelsBuf));
   const finalHashMatch = recomputedFinalHash === info.footer.finalHash;
 

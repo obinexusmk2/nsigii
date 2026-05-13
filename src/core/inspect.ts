@@ -9,6 +9,8 @@ export interface InspectResult {
   segments: NSIGIISegment[];
   verification: NSIGIIVerification;
   footer: NSIGIIFooter;
+  channelTableOffset: number;
+  segmentTableOffset: number;
   payloadOffset: number;
   payloadSize: number;
 }
@@ -26,13 +28,19 @@ export function inspectFile(inputPath: string): InspectResult {
   const minor = buf.readUInt8(off++);
   const patch = buf.readUInt8(off++);
   const version = `${major}.${minor}.${patch}` as "7.0.0";
-  off++;
- off += 4;
+  const format = buf.readUInt8(off++);
+  off += 1; // reserved
+  const headerSize = buf.readUInt32LE(off); off += 4;
   const payloadSize = Number(buf.readBigUInt64LE(off)); off += 8;
   const channelCount = buf.readUInt8(off++);
   const channelTableOffset = Number(buf.readBigUInt64LE(off)); off += 8;
   const segmentTableOffset = Number(buf.readBigUInt64LE(off)); off += 8;
   const payloadOffset = Number(buf.readBigUInt64LE(off)); off += 8;
+  validateSize("headerSize", headerSize, buf.length);
+  validateOffset("channelTableOffset", channelTableOffset, buf.length);
+  validateOffset("segmentTableOffset", segmentTableOffset, buf.length);
+  validateOffset("payloadOffset", payloadOffset, buf.length);
+  validatePayloadBounds("payload", payloadOffset, payloadSize, buf.length);
   const payloadHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
   const fileId = buf.toString("utf8", off, off + 64).replace(/\0/g, ""); off += 64;
   const createdAt = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
@@ -42,7 +50,7 @@ export function inspectFile(inputPath: string): InspectResult {
   const header: NSIGIIHeader = {
     magic: "NSIGII", version, fileId, createdAt,
     originalFilename: originalFilename || undefined,
-    formatHint: (formatHint || undefined) as any,
+    formatHint: (formatHint || byteToFormatHint(format)) as any,
     payloadSize, payloadHash,
   };
 
@@ -65,6 +73,8 @@ export function inspectFile(inputPath: string): InspectResult {
     const timestampNs = Number(buf.readBigUInt64LE(off)); off += 8;
     const segPayloadOffset = Number(buf.readBigUInt64LE(off)); off += 8;
     const segPayloadSize = Number(buf.readBigUInt64LE(off)); off += 8;
+    validateOffset(`segment ${segmentId} payloadOffset`, segPayloadOffset, buf.length);
+    validatePayloadBounds(`segment ${segmentId} payload`, segPayloadOffset, segPayloadSize, buf.length);
     const segPayloadHash = buf.toString("utf8", off, off + 32).replace(/\0/g, ""); off += 32;
     const rwxFlags = buf.readUInt8(off++);
     const stateByte = buf.readUInt8(off++);
@@ -92,7 +102,33 @@ export function inspectFile(inputPath: string): InspectResult {
   const signature = buf.toString("utf8", off, off + 64).replace(/\0/g, "") || undefined;
   const footer: NSIGIIFooter = { segmentCount: fSegmentCount, finalHash, signature };
 
-  return { header, channels, segments, verification, footer, payloadOffset, payloadSize };
+  return { header, channels, segments, verification, footer, channelTableOffset, segmentTableOffset, payloadOffset, payloadSize };
+}
+
+function validateOffset(name: string, offset: number, length: number): void {
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= length) {
+    throw new Error(`Invalid NSIGII offset ${name}: ${offset} outside file bounds 0-${length - 1}`);
+  }
+}
+
+function validateSize(name: string, size: number, length: number): void {
+  if (!Number.isSafeInteger(size) || size < 0 || size > length) {
+    throw new Error(`Invalid NSIGII ${name}: ${size} outside file length ${length}`);
+  }
+}
+
+function validatePayloadBounds(name: string, offset: number, size: number, length: number): void {
+  if (!Number.isSafeInteger(size) || size < 0) {
+    throw new Error(`Invalid NSIGII ${name} size: ${size}`);
+  }
+  const end = offset + size;
+  if (!Number.isSafeInteger(end) || end > length) {
+    throw new Error(`Invalid NSIGII ${name} bounds: ${offset} + ${size} exceeds file length ${length}`);
+  }
+}
+
+function byteToFormatHint(b: number) {
+  switch (b) { case 1: return "archive"; case 2: return "video"; case 3: return "audio"; case 4: return "text"; case 5: return "wasm"; case 6: return "binary"; case 7: return "mixed"; default: return "unknown"; }
 }
 
 function byteToClass(b: number) {
