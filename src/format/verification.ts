@@ -1,13 +1,16 @@
+import { HASH_HEX_LENGTH } from "./header.js";
 import { writeUInt8, writeUInt64LE, writeFloatLE, writeString, readUInt8, readUInt64LE, readFloatLE, readString } from "../utils/bytes.js";
 import type { NSIGIIVerification, NSIGIIConsensusState, NSIGIIHumanRightsTag } from "../types.js";
 
+export const VERIFICATION_BLOCK_SIZE = 8 + HASH_HEX_LENGTH + HASH_HEX_LENGTH + HASH_HEX_LENGTH + 1 + 4 + 1 + 7;
+
 export function serializeVerification(v: NSIGIIVerification): Buffer {
-  const buf = Buffer.alloc(8 + 32 + 32 + 32 + 1 + 4 + 1 + 7);
+  const buf = Buffer.alloc(VERIFICATION_BLOCK_SIZE);
   let off = 0;
   off = writeUInt64LE(buf, off, v.segmentId);
-  off = writeString(buf, off, v.transmitHash, 32);
-  off = writeString(buf, off, v.receiveHash, 32);
-  off = writeString(buf, off, v.verifyHash, 32);
+  off = writeString(buf, off, v.transmitHash, HASH_HEX_LENGTH);
+  off = writeString(buf, off, v.receiveHash, HASH_HEX_LENGTH);
+  off = writeString(buf, off, v.verifyHash, HASH_HEX_LENGTH);
   off = writeUInt8(buf, off, consensusToByte(v.consensus));
   off = writeFloatLE(buf, off, v.consensusScore);
   off = writeUInt8(buf, off, hrTagToByte(v.humanRightsTag));
@@ -18,9 +21,9 @@ export function serializeVerification(v: NSIGIIVerification): Buffer {
 export function deserializeVerification(buf: Buffer): NSIGIIVerification {
   let off = 0;
   const [segmentId] = readUInt64LE(buf, off); off += 8;
-  const [transmitHash] = readString(buf, off, 32); off += 32;
-  const [receiveHash] = readString(buf, off, 32); off += 32;
-  const [verifyHash] = readString(buf, off, 32); off += 32;
+  const [transmitHash] = readString(buf, off, HASH_HEX_LENGTH); off += HASH_HEX_LENGTH;
+  const [receiveHash] = readString(buf, off, HASH_HEX_LENGTH); off += HASH_HEX_LENGTH;
+  const [verifyHash] = readString(buf, off, HASH_HEX_LENGTH); off += HASH_HEX_LENGTH;
   const [consensusByte] = readUInt8(buf, off); off += 1;
   const [consensusScore] = readFloatLE(buf, off); off += 4;
   const [hrByte] = readUInt8(buf, off); off += 1;

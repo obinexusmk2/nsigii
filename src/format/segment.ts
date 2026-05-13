@@ -1,8 +1,12 @@
+import { HASH_HEX_LENGTH } from "./header.js";
 import { writeUInt8, writeUInt64LE, writeString, readUInt8, readUInt64LE, readString } from "../utils/bytes.js";
 import type { NSIGIISegment, NSIGIIClassification } from "../types.js";
 
+export const SEGMENT_ENTRY_SIZE = 8 + 1 + 8 + 8 + 8 + HASH_HEX_LENGTH + 1 + 1 + 2;
+export const TRIDENT_SEGMENT_COUNT = 3;
+
 export function serializeSegments(segments: NSIGIISegment[]): Buffer {
-  const buf = Buffer.alloc(segments.length * 71);
+  const buf = Buffer.alloc(segments.length * SEGMENT_ENTRY_SIZE);
   let off = 0;
   for (const s of segments) {
     off = writeUInt64LE(buf, off, s.segmentId);
@@ -10,7 +14,7 @@ export function serializeSegments(segments: NSIGIISegment[]): Buffer {
     off = writeUInt64LE(buf, off, s.timestampNs);
     off = writeUInt64LE(buf, off, s.payloadOffset);
     off = writeUInt64LE(buf, off, s.payloadSize);
-    off = writeString(buf, off, s.payloadHash, 32);
+    off = writeString(buf, off, s.payloadHash, HASH_HEX_LENGTH);
     off = writeUInt8(buf, off, s.rwxFlags);
     off = writeUInt8(buf, off, classificationToByte(s.state));
     off += 2;
@@ -27,7 +31,7 @@ export function deserializeSegments(buf: Buffer, count: number): NSIGIISegment[]
     const [timestampNs] = readUInt64LE(buf, off); off += 8;
     const [payloadOffset] = readUInt64LE(buf, off); off += 8;
     const [payloadSize] = readUInt64LE(buf, off); off += 8;
-    const [payloadHash] = readString(buf, off, 32); off += 32;
+    const [payloadHash] = readString(buf, off, HASH_HEX_LENGTH); off += HASH_HEX_LENGTH;
     const [rwxFlags] = readUInt8(buf, off); off += 1;
     const [stateByte] = readUInt8(buf, off); off += 1;
     off += 2;
