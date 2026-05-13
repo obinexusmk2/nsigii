@@ -1,0 +1,11 @@
+NSIGII
+
+A tamper-evident payload runtime with verifiable execution stages.
+
+NSIGII defines a linkable-then-executable (LTF) container model where
+payloads transition through constitutional verification stages:
+
+TRANSMIT → RECEIVE → VERIFY
+
+Each transition produces observable integrity metadata,
+consensus states, and execution proofs.
