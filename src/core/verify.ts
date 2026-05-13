@@ -14,7 +14,9 @@ export function verifyFile(inputPath: string): NSIGIIVerifyResult {
   const payloadHashMatch = recomputedPayloadHash === info.header.payloadHash;
 
   const channelsBuf = buf.subarray(info.channelTableOffset, info.segmentTableOffset);
-  const recomputedFinalHash = computeFileHash(payload, sha256Buffer(channelsBuf));
+  const recomputedChannelHash = sha256Buffer(channelsBuf);
+  const channelHashMatch = info.channels.every((channel) => channel.hash === recomputedPayloadHash);
+  const recomputedFinalHash = computeFileHash(payload, recomputedChannelHash);
   const finalHashMatch = recomputedFinalHash === info.footer.finalHash;
 
   const rwxChainValid = info.segments.every((s, i) => s.rwxFlags === [0b010, 0b100, 0b001][i]);
@@ -22,7 +24,7 @@ export function verifyFile(inputPath: string): NSIGIIVerifyResult {
   let consensus: "YES" | "NO" | "MAYBE" = "MAYBE";
   let classification: "SIGNAL" | "NOSIGNAL" | "NOISE" | "NONOISE" = "NOISE";
 
-  if (payloadHashMatch && finalHashMatch && rwxChainValid) {
+  if (payloadHashMatch && channelHashMatch && finalHashMatch && rwxChainValid) {
     consensus = "YES"; classification = "SIGNAL";
   } else if (!payloadHashMatch && !finalHashMatch) {
     consensus = "NO"; classification = "NOISE";
@@ -30,5 +32,5 @@ export function verifyFile(inputPath: string): NSIGIIVerifyResult {
     consensus = "MAYBE"; classification = "NOSIGNAL";
   }
 
-  return { consensus, classification, payloadHashMatch, channelHashMatch: true, finalHashMatch, rwxChainValid };
+  return { consensus, classification, payloadHashMatch, channelHashMatch, finalHashMatch, rwxChainValid };
 }
