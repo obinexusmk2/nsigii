@@ -2,10 +2,8 @@
  * Cross-check the container writer against examples/nsigii-viewer.html.
  *
  * The viewer renders the NSIGII *codec stream* (version "7.0.0" / "7.1.0A") and
- * deliberately refuses the *constitutional wrapper* this package writes, sending
- * the user to `npx nsigii extract`. That refusal path is the contract: a wrapped
- * file MUST be recognised by the viewer's own `readHeader()` as a wrapper. This
- * test lifts `readHeader` straight out of the HTML and runs it on real output.
+ * also displays a receipt for the *constitutional wrapper* this package writes.
+ * This test lifts `readHeader` straight out of the HTML and runs it on real output.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
@@ -51,25 +49,19 @@ afterAll(() => {
 });
 
 describe("examples/nsigii-viewer.html", () => {
-  it("still guards on the ENDNSIGII sentinel and the nsigii package name", () => {
+  it("recognises the ENDNSIGII sentinel without asking the viewer to execute data", () => {
     const html = readFileSync(VIEWER, "utf8");
     expect(html).toContain('tail.includes("ENDNSIGII")');
-    expect(html).toContain("npx nsigii extract");
-    expect(html).not.toContain("@obinexusltd/nsigii");
+    expect(html).toContain("This viewer displays the container receipt only");
+    expect(html).toContain("does not execute");
   });
 
-  it("recognises a wrapped container as a constitutional wrapper", () => {
+  it("opens a wrapped container as a constitutional wrapper receipt", () => {
     const readHeader = loadViewerReadHeader(readFileSync(VIEWER, "utf8"));
     const bytes = readFileSync(container);
-
-    let thrown: any;
-    try {
-      readHeader(bufferToArrayBuffer(bytes));
-    } catch (err) {
-      thrown = err;
-    }
-    expect(thrown).toBeDefined();
-    expect(thrown.wrapper).toBe(true);
+    const header = readHeader(bufferToArrayBuffer(bytes)) as { variant: string; payloadSize: number };
+    expect(header.variant).toBe("wrapper");
+    expect(header.payloadSize).toBeGreaterThan(0);
   });
 
   it("satisfies both of the viewer's wrapper signals", () => {
@@ -89,7 +81,8 @@ describe("examples/nsigii-viewer.html", () => {
     codec.write("NSIGII\0\0", 0, "latin1");
     codec.write("7.1.0A", 8, "ascii");
 
-    const header = readHeader(bufferToArrayBuffer(codec)) as { version: string };
+    const header = readHeader(bufferToArrayBuffer(codec)) as { variant: string; version: string };
+    expect(header.variant).toBe("codec");
     expect(header.version).toBe("7.1.0A");
   });
 });

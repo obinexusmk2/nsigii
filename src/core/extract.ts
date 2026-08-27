@@ -15,7 +15,9 @@ export function extractFile(inputPath: string, outputPath?: string): ExtractResu
   const info = inspectFile(inputPath);
   const verifyResult = verifyFile(inputPath);
 
-  if (verifyResult.consensus === "NO") throw new Error("NSIGII container verification failed — extraction blocked");
+  if (verifyResult.consensus !== "YES") {
+    throw new Error(`NSIGII container did not reach required 3/3 verification consensus (${verifyResult.consensusCount}/3) — extraction blocked`);
+  }
 
   const payload = buf.subarray(info.payloadOffset, info.payloadOffset + info.payloadSize);
   const dest = outputPath

@@ -68,6 +68,7 @@ export interface NSIGIIWrapOptions {
   originalFilename?: string;
   formatHint?: NSIGIIFormatHint;
   fileId?: string;
+  outputPath?: string;
 }
 
 export interface NSIGIIVerifyResult {
@@ -77,4 +78,7 @@ export interface NSIGIIVerifyResult {
   channelHashMatch: boolean;
   finalHashMatch: boolean;
   rwxChainValid: boolean;
+  /** Independent TRANSMIT, RECEIVE and VERIFY readings. YES requires 3/3. */
+  tridentChecks: readonly [boolean, boolean, boolean];
+  consensusCount: number;
 }

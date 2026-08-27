@@ -62,7 +62,7 @@ export function wrapFile(inputPath: string, options: NSIGIIWrapOptions = {}): st
   payload.copy(out, off); off += payload.length;
   footerBuf.copy(out, off); off += footerBuf.length;
 
-  const outputPath = resolved + ".nsigii";
+  const outputPath = options.outputPath ? resolve(options.outputPath) : resolved + ".nsigii";
   writeFileSync(outputPath, out);
   return outputPath;
 }

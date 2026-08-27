@@ -9,6 +9,23 @@
 
 ---
 
+## Two `.nsigii` formats
+
+The extension and the `NSIGII` magic are shared by two unrelated layouts. Tell
+them apart by **byte 7**:
+
+| | byte 7 | Layout | Tooling |
+|---|---|---|---|
+| **Constitutional wrapper** | `0x07` (version_major) | 7-byte magic `NSIGII\0`, trident header, `ENDNSIGII` footer | `wrap` / `inspect` / `verify` / `extract`; viewer shows its verified receipt |
+| **Codec stream** | `0x00` (magic padding) | 8-byte magic `NSIGII\0\0`, 32-byte header, raw DEFLATE frames | `inspect` / `verify` / `view`; [`examples/`](examples/README.md) render its frames |
+
+The rest of this README documents the **wrapper**. The codec stream — a data
+file whose interactivity is baked in as state — is documented under
+[`examples/`](examples/README.md). `run` is intentionally verification-only:
+NSIGII artifacts are data, so the CLI never executes their payloads.
+
+---
+
 ## Installation
 ![NSIGII V7](image.png)
 
@@ -94,7 +111,8 @@ Commands:
   extract <file>    Extract payload
   link              Resolve linked artifacts
   topology          Inspect trident topology
-  run               Execute verified payload
+  run               Verify a data-only artifact; never execute a payload
+  view              Validate and identify the independent browser viewer
   sign              Sign NSIGII container
 
 Options:
@@ -213,8 +231,14 @@ sentinel a third party scans for to confirm the container was written in full.
 | CH2 | VERIFY | brokers consensus, emits the verdict | EXECUTE — `0b001` = 1 |
 
 `verify` recomputes the payload hash and the channel-table hash, rebuilds the
-final hash, and checks the RWX chain reads `WRITE → READ → EXECUTE` — a verdict
-from two of the three readings, never requiring all three (§3.6).
+final hash, and checks the RWX chain reads `WRITE → READ → EXECUTE`. A wrapper
+reaches `YES` only when all three independent channel readings agree (`3/3`),
+with its recorded verification receipt and final hash intact.
+
+This is the package's strict wrapper-conformance profile. The wider protocol
+documents discuss quorum behaviour for distributed receivers; this local,
+single-artifact verifier deliberately does not promote a partial receipt to
+`YES`.
 
 ### States
 

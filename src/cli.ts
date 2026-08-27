@@ -2,12 +2,14 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { resolve, basename } from "node:path";
+import { basename, resolve } from "node:path";
 import { wrapFile } from "./core/wrap.js";
 import { inspectFile } from "./core/inspect.js";
 import { verifyFile } from "./core/verify.js";
 import { extractFile } from "./core/extract.js";
 import { linkArtifacts, resolveTopology } from "./core/link.js";
+import { detectNsigiiVariant } from "./core/variant.js";
+import { inspectCodecFile, verifyCodecFile } from "./core/codec.js";
 
 const program = new Command();
 
@@ -24,7 +26,7 @@ program
   .action(async (file: string, opts: { output?: string; format?: string }) => {
     const spinner = ora("Wrapping payload into NSIGII container...").start();
     try {
-      const out = wrapFile(file, { formatHint: opts.format as any, originalFilename: basename(file) });
+      const out = wrapFile(file, { formatHint: opts.format as any, originalFilename: basename(file), outputPath: opts.output });
       spinner.succeed(chalk.green(`Wrapped → ${out}`));
     } catch (err: any) {
       spinner.fail(chalk.red(`Wrap failed: ${err.message}`));
@@ -37,6 +39,17 @@ program
   .description("Inspect NSIGII container metadata")
   .action(async (file: string) => {
     try {
+      if (detectNsigiiVariant(file) === "codec") {
+        const info = inspectCodecFile(file);
+        console.log(chalk.bold(`NSIGII codec stream v${info.version}`));
+        console.log(chalk.gray("─".repeat(40)));
+        console.log(`${chalk.bold("Kind:")}         ${info.kind === "ascii" ? "interactive ASCII state grid" : "I420 video timeline"}`);
+        console.log(`${chalk.bold("Dimensions:")}   ${info.width} × ${info.height}`);
+        console.log(`${chalk.bold("Frames:")}       ${info.frameCount} found / ${info.declaredFrameCount || "unpatched"} declared`);
+        console.log(`${chalk.bold("Frame table:")}  ${info.complete ? "complete" : "truncated"}`);
+        console.log(`${chalk.bold("Data-only:")}    raw DEFLATE frame blobs; no embedded program`);
+        return;
+      }
       const info = inspectFile(file);
       console.log(chalk.bold("NSIGII v7.0.0"));
       console.log(chalk.gray("─".repeat(40)));
@@ -46,7 +59,7 @@ program
       console.log(`${chalk.bold("Format Hint:")}  ${info.header.formatHint ?? "unknown"}`);
       console.log(`${chalk.bold("Payload Size:")} ${info.header.payloadSize} bytes`);
       console.log(`${chalk.bold("Payload Hash:")} ${info.header.payloadHash}`);
-      console.log(`${chalk.bold("Consensus:")}    ${info.verification.consensus}`);
+      console.log(`${chalk.bold("Consensus:")}    ${info.verification.consensus} (${info.verification.consensusScore * 3}/3 recorded)`);
       console.log(`${chalk.bold("Classification:")} ${info.verification.consensus === "YES" ? "SIGNAL" : "NOSIGNAL"}`);
       console.log(`${chalk.bold("RWX Chain:")}    ${info.segments.map((s) => `CH${s.channelId} ${["WRITE","READ","EXECUTE"][s.channelId]}`).join(" → ")}`);
       console.log(`${chalk.bold("Channels:")}`);
@@ -65,9 +78,16 @@ program
   .action(async (file: string) => {
     const spinner = ora("Verifying NSIGII container...").start();
     try {
+      if (detectNsigiiVariant(file) === "codec") {
+        const result = verifyCodecFile(file);
+        if (!result.readable) throw new Error(result.error ?? "codec stream could not be read");
+        const count = result.frameCountMatch ? "matches header" : "is readable; header count is unpatched or differs";
+        spinner.succeed(chalk.green(`Codec data verified: ${result.inflatedFrames} raw-DEFLATE frames inflated; count ${count}.`));
+        return;
+      }
       const result = verifyFile(file);
       if (result.consensus === "YES") {
-        spinner.succeed(chalk.green(`Container verified. Consensus: YES | Classification: SIGNAL`));
+        spinner.succeed(chalk.green(`Container verified. Consensus: YES (3/3) | Classification: SIGNAL`));
       } else if (result.consensus === "NO") {
         spinner.fail(chalk.red(`Container tampered. Consensus: NO | Classification: NOISE`));
         process.exit(1);
@@ -87,6 +107,9 @@ program
   .action(async (file: string, opts: { output?: string }) => {
     const spinner = ora("Extracting payload...").start();
     try {
+      if (detectNsigiiVariant(file) === "codec") {
+        throw new Error("Codec streams are frame data, not a wrapped original payload. Open them in nsigii-viewer.html or nsigii_play.py.");
+      }
       const result = extractFile(file, opts.output);
       if (result.verified) spinner.succeed(chalk.green(`Extracted → ${result.outputPath} (verified)`));
       else spinner.warn(chalk.yellow(`Extracted → ${result.outputPath} (unverified)`));
@@ -123,16 +146,51 @@ program
     console.log(`CH0 TRANSMIT  → WRITE  → 127.0.0.1`);
     console.log(`CH1 RECEIVE   → READ   → 127.0.0.2`);
     console.log(`CH2 VERIFY    → EXECUTE → 127.0.0.3`);
-    console.log(chalk.gray("Consensus threshold: 2/3 (0.67)"));
+    console.log(chalk.gray("Consensus threshold: 3/3 (1.00)"));
     console.log(chalk.gray("RWX chain: WRITE → READ → EXECUTE"));
   });
 
 program
   .command("run <file>")
-  .description("Execute verified payload (adapter-based, future)")
+  .description("Verify data-only container; never execute its payload")
   .action(async (file: string) => {
-    console.log(chalk.yellow("Run adapter not yet implemented. Use 'extract' to retrieve payload."));
-    console.log(chalk.gray(`Target: ${resolve(file)}`));
+    try {
+      const variant = detectNsigiiVariant(file);
+      if (variant === "wrapper") {
+        const result = verifyFile(file);
+        if (result.consensus !== "YES") throw new Error(`wrapper verification did not reach 3/3 consensus (${result.consensusCount}/3)`);
+      } else {
+        const result = verifyCodecFile(file);
+        if (!result.readable) throw new Error(result.error ?? "codec verification failed");
+      }
+      console.log(chalk.green("Verified data-only NSIGII artifact. No payload was executed."));
+      console.log(chalk.gray("Use `nsigii view <file>` to select a renderer, or `nsigii extract` for a verified wrapper payload."));
+    } catch (err: any) {
+      console.error(chalk.red(`Run refused: ${err.message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command("view <file>")
+  .description("Validate an NSIGII data artifact and identify its independent viewer")
+  .action((file: string) => {
+    try {
+      const variant = detectNsigiiVariant(file);
+      if (variant === "wrapper") {
+        const result = verifyFile(file);
+        if (result.consensus !== "YES") throw new Error(`wrapper verification did not reach 3/3 consensus (${result.consensusCount}/3)`);
+        console.log(chalk.green("Openable in nsigii-viewer.html: constitutional wrapper receipt (3/3 verified)."));
+      } else {
+        const result = verifyCodecFile(file);
+        if (!result.readable) throw new Error(result.error ?? "codec verification failed");
+        console.log(chalk.green("Openable in nsigii-viewer.html: codec frame data (no executable payload)."));
+      }
+      console.log(chalk.gray(`Drop ${resolve(file)} onto examples/nsigii-viewer.html.`));
+    } catch (err: any) {
+      console.error(chalk.red(`View refused: ${err.message}`));
+      process.exit(1);
+    }
   });
 
 program

@@ -1,0 +1,193 @@
+I made a file format interactive without putting any code in it
+URL: 
+ - https://github.com/obinexus/nsigii_viewer/blob/main/nsigii-viewer.html
+  
+Description:
+
+A spinning ASCII donut you control with your mouse — except it isn't a program. It's a data file, and the interactivity is baked in as state, not script.
+
+
+
+![Image description](https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/p1u5erlnoi0tbgyxhstv.gif)
+
+
+![Image description](https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/wbu2rvmhla81b443ncrk.jpeg)
+
+Open this file in a browser and drag your cursor across it. A donut spins under your hand, each character coloured, responding to how fast you move.
+
+It isn't a program. There is no JavaScript inside it, no bytecode, no embedded interpreter. It's a data file — a header and some DEFLATE blobs — and every frame of that interaction was baked in before you opened it.
+
+Here's how, and why I needed it to work that way.
+
+## The problem with "interactive file"
+
+
+Usually, making a file interactive means putting code in it. A PDF with embedded JS. An HTML page. An executable. The moment you do that, the file becomes something you have to *trust* — and something that only runs where its runtime runs.
+
+I wanted the opposite: a file you can read with twenty lines of Python, that still responds to a cursor.
+
+The trick is to stop thinking about a timeline and start thinking about a **state space**.
+
+
+![Image description](https://dev-to-uploads.s3.us-east-2.amazonaws.com/uploads/articles/zvgkbhz8zcmcvy6gbog2.gif)
+
+## Bake the states, not the frames
+
+A video is frames indexed by time: frame 0, 1, 2, played in order. The donut is frames indexed by **rotation**:
+
+```plaintext
+        A  (pitch)  ← vertical cursor movement
+        B  (yaw)    ← horizontal cursor movement
+```
+
+I render the torus at every combination of A and B on a 24×24 grid — 576 frames, 15° apart — and store them as an ordinary frame sequence. The viewer doesn't compute anything. It converts cursor motion into an (A, B) coordinate and looks up the cell:
+
+```js
+const ai = Math.floor((A % TAU) / TAU * gridA);
+const bi = Math.floor((B % TAU) / TAU * gridB);
+const idx = ai * gridB + bi;
+```
+
+That's the whole interaction engine. One multiply, one add.
+
+Because nothing is computed at play time, the file stays pure data. The same bytes drive a terminal player in Python and a viewer in the browser, and neither one shares a line of code with the other.
+
+## The container
+
+The format is called NSIGII. The header is 32 bytes and hasn't changed since the first version:
+
+```plaintext
+offset  size  field
+0       8     magic       "NSIGII\0\0"
+8       8     version     "7.0.0"  → I420 video timeline
+                          "7.1.0A" → coloured ASCII rotation grid
+16      4     width       uint32   pixels, or terminal columns
+20      4     height      uint32   pixels, or terminal rows
+24      4     framecount  uint32
+28      4     reserved    uint32
+then, repeating:
+        4     framesize   uint32
+        N     framedata   raw DEFLATE (RFC 1951)
+```
+
+Adding the interactive kind needed **no format change**. The variant rides in two fields nobody was using: a trailing `A` on the version string, and the grid dimensions packed into `reserved`:
+
+```go
+reserved: (gridA << 16) | gridB     // 0x00180018 = 24 × 24
+```
+
+Old readers see a version they don't recognise and stop. New readers branch. No flag day.
+
+The frame payload for the ASCII kind is four **planar** byte planes — `chars | red | green | blue` — rather than interleaved RGBA per cell. That one decision matters more than it looks: the character plane is mostly spaces and each colour plane is locally smooth, so DEFLATE gets **29.7% of raw**. Interleaved, the same data lands around 60%.
+
+## Reading it anywhere
+
+This is the part I actually cared about. Here is a complete reader:
+
+```python
+import struct, zlib
+
+def read_nsigii(path):
+    with open(path, "rb") as f:
+        head = f.read(32)
+        assert head[:6] == b"NSIGII"
+        version = head[8:16].rstrip(b"\0").decode()
+        w, h, declared, reserved = struct.unpack("<IIII", head[16:32])
+        frames = []
+        while (sz := f.read(4)) and len(sz) == 4:
+            (size,) = struct.unpack("<I", sz)
+            blob = f.read(size)
+            if len(blob) < size:
+                break
+            frames.append(zlib.decompress(blob, -15))   # raw DEFLATE
+        return version, w, h, frames
+```
+
+One gotcha worth the whole section: **`-15`**. Go's `compress/flate` writes raw DEFLATE with no zlib wrapper. `zlib.decompress(blob)` fails with `Error -3: incorrect header check`. You need `wbits=-15`.
+
+The browser has the same distinction and the same fix:
+
+```js
+const stream = new Blob([bytes]).stream()
+  .pipeThrough(new DecompressionStream("deflate-raw"));
+const out = new Uint8Array(await new Response(stream).arrayBuffer());
+```
+
+`DecompressionStream` is native — Chrome 103+, Firefox 113+, Safari 16.4+. **No pako, no build step, no bundler.** The entire browser viewer is one HTML file with zero dependencies, and it opens from `file://`.
+
+## The bug that three renderers found
+
+The video kind came first, and it was broken in a way I couldn't see until I had something to see it with.
+
+Encoding a real video produced this: **the picture appeared twice, side by side, squeezed into the top half of the frame. The bottom half was solid green.**
+
+Three separate things, one root cause.
+
+The encoder ran frames through a 2→1 "sparse duplex" stage that halves the byte count, then handed the halved buffer to the RGB→YUV converter — which still indexed it as full-length RGB24. So each output row consumed *two* original rows' worth of data. As `i` swept left to right across a row, the source swept through original row `2j` (left half) and row `2j+1` (right half). Adjacent rows look nearly identical. Hence two copies.
+
+The same mistake squashed the image 2:1 vertically into the top half, and a bounds guard silently skipped everything past the midpoint. Hence the dead zone.
+
+And the green? The unwritten region was zero-filled. For I420, neutral chroma is **128**, not 0. Convert Y=0, U=0, V=0:
+
+```plaintext
+R = 0 + 1.402  × (0−128)              = −179 → 0
+G = 0 − 0.344  × (0−128) − 0.714 × (0−128) = 135
+B = 0 + 1.772  × (0−128)              = −227 → 0
+```
+
+`rgb(0, 135, 0)`. Exactly the green on screen.
+
+I verified the duplication numerically rather than by eye — left-half versus right-half mean difference was **0.10** on the broken path and **41–72** on the fixed one. The fix was one line: pass the original frame to the converter, not the halved payload.
+
+What made this findable was having **three independent renderers** — a Go encoder, a Python terminal player, and a browser viewer sharing nothing but a 32-byte header. When all three draw the same artifact, it's the data. When one disagrees, it's that renderer. That's worth more than any amount of staring at the encoder.
+
+## What's still broken
+
+Being straight about this, because the repo is public and I'd rather you hear it from me:
+
+- **The 2→1 stage isn't invertible.** `a ^ (0x0F ^ b)` maps 16 bits to 8. You cannot recover `a` and `b`. It works as a structural digest; it does not work as compression, and there is no decoder yet.
+- **The compression isn't competitive.** h.264 beats it comfortably. That was never the point, but it should be said out loud.
+- **There's no signing.** The container carries a SHA-256, which proves the bytes haven't changed since *someone* wrote them. It does not prove who, or when. That's the next thing I'm building and it's the one that matters most.
+- **No frame index.** You can't seek without walking the file, which makes range requests over HTTP impossible.
+
+## Why I'm building this
+
+NSIGII isn't really a codec project. The codec was the vehicle for proving the container works.
+
+It's a protocol for **requesting food, water and shelter, and having a record that the request was made**. Its governing rule, from the spec:
+
+> Breathing and living are pointers that must hold in all contexts. Work is optional.
+
+A pointer that must not be null is the thing you build a system to guarantee. If the breathing pointer drifts, someone is dying. Work is a pointer that *may* be null — and a system that forces it anyway causes harm.
+
+The spec has three invariants, each bound to one of its three addressing modes:
+
+| mode | invariant |
+|---|---|
+| **here and now** | never a toy |
+| **there and then** | never a weapon |
+| **where and whenever** | never a problem |
+
+A claim entered under *where and whenever* is unbound in both place and time — a standing claim. It can't be discharged by a missed slot, because it has no slot to miss.
+
+The reason the file has to work with twenty lines of Python and no dependencies in a browser is not elegance. It's that the people this is for are in temporary accommodation, on borrowed devices, with intermittent connectivity. A format that needs an install, an account, or a server is a format they can't use.
+
+## Try it
+
+The spec, the viewer, the baker and the donut are all here:
+
+**[github.com/obinexus/nsigii_viewer](https://github.com/obinexus/nsigii_viewer)**
+
+Open `nsigii-viewer.html` in a browser and drop `donut.nsigii` on it. Drag across the scope. The gain scales with how fast you move — 2.5× on a slow drag, 5.0× on a flick — and there's a slider to retune it.
+
+Or bake your own at a different resolution:
+
+```bash
+python donut_nsigii.py --cols 100 --rows 30 --grid 32
+```
+
+The original donut is Andy Sloane's `donut.c`. I only taught it to sit still inside a file until someone moves a cursor.
+
+---
+
+*Nnamdi Michael Okpala — OBINexus Computing*

@@ -346,17 +346,24 @@ function readHeader(buf) {
   if (ascii(bytes, 0, 6) !== MAGIC) {
     throw new Error(`Bad magic "${ascii(bytes, 0, 6)}" — this is not an NSIGII container.`);
   }
-  // The constitutional wrapper from the nsigii package shares the magic and
-  // the extension but is a different format: byte 7 is 0x07 and it ends with
-  // an ENDNSIGII footer.
+  // The constitutional wrapper shares the magic but is a separate data-only
+  // layout. Show its receipt instead of attempting to decode it as video.
   const tail = ascii(bytes, Math.max(0, bytes.length - 4096), Math.min(4096, bytes.length));
   if (bytes[7] === 0x07 || tail.includes("ENDNSIGII")) {
-    const e = new Error("This is a constitutional wrapper container, not a codec stream.");
-    e.wrapper = true;
-    throw e;
+    if (bytes.length < 369) throw new Error("Constitutional wrapper is shorter than its header.");
+    const dv = new DataView(buf);
+    const payloadSize = Number(dv.getBigUint64(16, true));
+    const payloadOffset = Number(dv.getBigUint64(41, true));
+    if (!Number.isSafeInteger(payloadOffset) || payloadOffset < 0 || payloadOffset + payloadSize > bytes.length) {
+      throw new Error("Constitutional wrapper has invalid payload bounds.");
+    }
+    return { variant: "wrapper", version: `${bytes[7]}.${bytes[8]}.${bytes[9]}`,
+      fileName: ascii(bytes, 209, 128), formatHint: ascii(bytes, 337, 32),
+      payloadSize, payloadHash: ascii(bytes, 49, 64), footerFound: tail.includes("ENDNSIGII") };
   }
   const dv = new DataView(buf);
   return {
+    variant: "codec",
     version:  ascii(bytes, 8, 8),
     width:    dv.getUint32(16, true),
     height:   dv.getUint32(20, true),
@@ -393,8 +400,12 @@ async function inflateAll(blobs, onProgress) {
 }
 
 /* ===========================================================================
-   Interaction contract (mirrors nsigii_play.py)
-   Gain applied to cursor motion scales with cursor speed between these bounds.
+   Interaction contract — same gain law as nsigii_play.py: gain rises linearly
+   from GAIN_MIN to GAIN_MAX as cursor speed goes 0 → SPEED_REF, then clamps.
+   GAIN_MIN/MAX, RAD_PER_CELL and IDLE_SPIN are identical to the terminal
+   player; only SPEED_REF differs, because the browser measures speed in
+   pixel-derived cells rather than terminal cells — so it is exposed as a
+   slider (40–600) instead of a fixed 60.
 =========================================================================== */
 const GAIN_MIN = 2.5;
 const GAIN_MAX = 5.0;
@@ -630,15 +641,7 @@ async function load(buf, name) {
   try {
     header = readHeader(buf);
   } catch (err) {
-    if (err.wrapper) {
-      showPlate(`<h2>Constitutional wrapper, not a codec stream</h2>
-        <p>This file carries the verification receipt format from
-        <code>nsigii</code>. It shares the magic and the extension
-        with the codec stream but is a different layout.</p>
-        <p>Unwrap it first: <code>npx nsigii extract "${name}"</code></p>`, true);
-    } else {
-      showPlate(`<h2>Could not read this container</h2><p>${err.message}</p>`, true);
-    }
+    showPlate(`<h2>Could not read this container</h2><p>${err.message}</p>`, true);
     setStatus("unreadable");
     $("kindBadge").hidden = true;
     $("meta").hidden = true;
@@ -646,6 +649,21 @@ async function load(buf, name) {
   }
 
   S.header = header;
+  if (header.variant === "wrapper") {
+    const badge = $("kindBadge");
+    badge.hidden = false;
+    badge.className = "badge";
+    badge.textContent = "constitutional wrapper";
+    showPlate(`<h2>Constitutional wrapper receipt</h2>
+      <p>This data-only container holds a payload and trident receipt. This viewer does not execute it.</p>
+      <p>Use <code>nsigii verify</code> for 3/3 verification or <code>nsigii extract</code> to restore its bytes.</p>`, false);
+    $("meta").hidden = false;
+    $("asciiCtrl").hidden = true;
+    $("videoCtrl").hidden = true;
+    buildWrapperMeta(header, name);
+    setStatus("wrapper receipt");
+    return;
+  }
   S.kind = payloadKind(header.version);
   const blobs = sliceFrames(buf);
 
@@ -705,6 +723,21 @@ async function load(buf, name) {
   });
   lastTick = performance.now();
   S.raf = requestAnimationFrame(tick);
+}
+
+function buildWrapperMeta(h, name) {
+  $("hdrList").innerHTML = `
+    <dt>file</dt><dd>${name}</dd>
+    <dt>magic</dt><dd>NSIGII</dd>
+    <dt>layout</dt><dd>constitutional wrapper v${h.version}</dd>
+    <dt>original</dt><dd>${h.fileName || "unnamed payload"}</dd>
+    <dt>format</dt><dd>${h.formatHint || "unknown"}</dd>`;
+  $("payList").innerHTML = `
+    <dt>payload</dt><dd>${h.payloadSize.toLocaleString("en-US")} B</dd>
+    <dt>payload hash</dt><dd>${h.payloadHash}</dd>
+    <dt>footer</dt><dd>${h.footerFound ? "ENDNSIGII found" : "missing"}</dd>
+    <dt>execution</dt><dd>not performed by this viewer</dd>`;
+  $("chainNote").innerHTML = `This viewer displays the receipt only. Use <code>nsigii verify</code> to require all three trident readings (3/3).`;
 }
 
 function buildMeta(h, blobs, frames, name) {

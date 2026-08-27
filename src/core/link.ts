@@ -1,6 +1,9 @@
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { inspectFile } from "./inspect.js";
+import { inspectCodecFile } from "./codec.js";
+import { detectNsigiiVariant } from "./variant.js";
+import { verifyFile } from "./verify.js";
 
 export interface LinkArtifact {
   path: string;
@@ -13,8 +16,12 @@ export function linkArtifacts(paths: string[]): LinkArtifact[] {
     const r = resolve(p);
     if (!existsSync(r)) return { path: r, headerHash: "", verified: false };
     try {
+      if (detectNsigiiVariant(r) === "codec") {
+        const info = inspectCodecFile(r);
+        return { path: r, headerHash: `${info.version}:${info.width}x${info.height}:${info.frameCount}`, verified: info.complete };
+      }
       const info = inspectFile(r);
-      return { path: r, headerHash: info.header.payloadHash, verified: true };
+      return { path: r, headerHash: info.header.payloadHash, verified: verifyFile(r).consensus === "YES" };
     } catch { return { path: r, headerHash: "", verified: false }; }
   });
 }

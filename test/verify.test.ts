@@ -10,6 +10,7 @@ const SAMPLE = resolve(TEST_DIR, "verify-regression.txt");
 let container: string;
 const PAYLOAD_TAMPERED = resolve(TEST_DIR, "verify-regression-payload.nsigii");
 const CHANNEL_TAMPERED = resolve(TEST_DIR, "verify-regression-channel.nsigii");
+const VERIFY_TAMPERED = resolve(TEST_DIR, "verify-regression-verification.nsigii");
 
 beforeAll(() => {
   mkdirSync(TEST_DIR, { recursive: true });
@@ -18,7 +19,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  [SAMPLE, container, PAYLOAD_TAMPERED, CHANNEL_TAMPERED].forEach((f) => {
+  [SAMPLE, container, PAYLOAD_TAMPERED, CHANNEL_TAMPERED, VERIFY_TAMPERED].forEach((f) => {
     if (f && existsSync(f)) unlinkSync(f);
   });
 });
@@ -33,6 +34,8 @@ describe("verify", () => {
     expect(result.channelHashMatch).toBe(true);
     expect(result.finalHashMatch).toBe(true);
     expect(result.rwxChainValid).toBe(true);
+    expect(result.tridentChecks).toEqual([true, true, true]);
+    expect(result.consensusCount).toBe(3);
   });
 
   it("rejects payload tampering after wrapping", () => {
@@ -62,5 +65,19 @@ describe("verify", () => {
     expect(result.payloadHashMatch).toBe(true);
     expect(result.channelHashMatch).toBe(false);
     expect(result.finalHashMatch).toBe(false);
+  });
+
+  it("requires all three independent trident readings", () => {
+    const info = inspectFile(container);
+    const mutated = Buffer.from(readFileSync(container));
+    // verification block starts immediately after the fixed trident segment table.
+    const verifyHashOffset = info.verificationOffset! + 8 + 64 + 64;
+    mutated[verifyHashOffset] = mutated[verifyHashOffset] === 0x30 ? 0x31 : 0x30;
+    writeFileSync(VERIFY_TAMPERED, mutated);
+
+    const result = verifyFile(VERIFY_TAMPERED);
+    expect(result.consensus).not.toBe("YES");
+    expect(result.tridentChecks).toEqual([true, true, false]);
+    expect(result.consensusCount).toBe(2);
   });
 });
