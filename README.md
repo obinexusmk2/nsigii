@@ -1,8 +1,11 @@
-# @obinexusltd/nsigii
+# nsigii
 
 > **NSIGII — Linkable-Then-Executable Constitutional Verification Container Runtime**
 >
 > OBINexus Constitutional Computing Framework
+>
+> Container runtime for the NSIGII protocol. See [`docs/NSIGII-SPEC.md`](docs/NSIGII-SPEC.md)
+> for the protocol specification; section references below (§) point into it.
 
 ---
 
@@ -12,7 +15,7 @@
 ### Global (recommended)
 
 ```bash
-npm install -g @obinexusltd/nsigii
+npm install -g nsigii
 ```
 
 Verify:
@@ -158,72 +161,103 @@ optional execution
 
 ## NSIGII File Format
 
+All multi-byte integers are little-endian (`endian` byte `0`). Hashes are stored
+as lowercase SHA-256 hex (64 ASCII bytes), not raw digest bytes.
+
 ### Binary Layout
 
 ```
-.nsigii file
-├── Magic Header        (7 bytes)   "NSIGII\0"
-├── Global File Header  (~256 bytes)
-├── Channel Table       (3 entries)
-├── Segment Table       (3 entries)
-├── Verification Block  (117 bytes)
-├── Payload Blocks      (raw bytes)
-└── Footer / Final Hash (112 bytes)  "ENDSIGII"
+.nsigii container
+├── Global File Header   369 bytes    starts with magic "NSIGII\0" then version_major 0x07
+├── Channel Table          3 entries  222 bytes for the default TRANSMIT/RECEIVE/VERIFY roles
+├── Segment Table          3 entries  303 bytes (101 bytes/entry) — the trident (§3.1)
+├── Verification Block   213 bytes    trident hashes + consensus verdict (§3.6, §5.1)
+├── Payload              raw bytes    the wrapped file, unmodified
+└── Footer               145 bytes    "ENDNSIGII" + segment_count + final hash
 ```
+
+Table lengths are not fixed: the header carries `header_size`, and
+`channel_table_offset` / `segment_table_offset` / `payload_offset` locate every
+following block, so a reader never assumes the sizes above. The file always ends
+with the ASCII marker **`ENDNSIGII`** (9 bytes) — this is the terminating
+sentinel a third party scans for to confirm the container was written in full.
 
 ### Header Fields
 
-| Field | Size | Description |
-|-------|------|-------------|
-| magic | 7 | `NSIGII\0` |
-| version_major | 1 | 7 |
-| version_minor | 1 | 0 |
-| version_patch | 1 | 0 |
-| format_type | 1 | archive, video, audio, text, wasm, binary, mixed |
-| endian | 1 | 0 = little |
-| header_size | 4 | total header bytes |
-| file_size | 8 | total file bytes |
-| channel_count | 1 | usually 3 |
-| channel_table_offset | 8 | pointer |
-| segment_table_offset | 8 | pointer |
-| payload_offset | 8 | pointer |
-| global_hash | 32 | SHA-256 of canonical body |
+| Field | Offset | Size | Description |
+|-------|-------:|-----:|-------------|
+| magic | 0 | 7 | `NSIGII\0` |
+| version_major | 7 | 1 | `7` (`0x07`) |
+| version_minor | 8 | 1 | `0` |
+| version_patch | 9 | 1 | `0` |
+| format_type | 10 | 1 | `0` unknown, `1` archive … `7` mixed |
+| endian | 11 | 1 | `0` = little-endian |
+| header_size | 12 | 4 | total header bytes (`369` for v7.0.0) |
+| payload_size | 16 | 8 | payload length in bytes |
+| channel_count | 24 | 1 | `3` (the trident) |
+| channel_table_offset | 25 | 8 | pointer to the channel table |
+| segment_table_offset | 33 | 8 | pointer to the segment table |
+| payload_offset | 41 | 8 | pointer to the payload |
+| payload_hash | 49 | 64 | SHA-256 of the payload, hex |
+| file_id | 113 | 64 | UUID |
+| created_at | 177 | 32 | ISO-8601 timestamp |
+| original_filename | 209 | 128 | name restored on `extract` |
+| format_hint | 337 | 32 | textual format hint |
 
-### Channels
+### Channels — the trident (§5.1)
 
-| ID | Role | RWX |
-|----|------|-----|
-| 0 | TRANSMIT | WRITE (0b010) |
-| 1 | RECEIVE | READ (0b100) |
-| 2 | VERIFY | EXECUTE (0b001) |
+| ID | Role | Wire verb | RWX tag (§4.2, POSIX) |
+|----|------|-----------|-----------------------|
+| CH0 | TRANSMIT | encodes + hashes the payload | WRITE — `0b010` = 2 |
+| CH1 | RECEIVE | decodes the wire form | READ — `0b100` = 4 |
+| CH2 | VERIFY | brokers consensus, emits the verdict | EXECUTE — `0b001` = 1 |
+
+`verify` recomputes the payload hash and the channel-table hash, rebuilds the
+final hash, and checks the RWX chain reads `WRITE → READ → EXECUTE` — a verdict
+from two of the three readings, never requiring all three (§3.6).
 
 ### States
 
 ```
-Classification:  NOISE(0x00) | NONOISE(0x01) | SIGNAL(0x02) | NOSIGNAL(0x03)
-Consensus:       MAYBE(0x10) | YES(0xFF) | NO(0x00) | TAMPERED(0xEE)
+Classification:  NOISE(0x00) | NONOISE(0x01) | SIGNAL(0x02) | NOSIGNAL(0x03)   (§6.1 signal quadrants)
+Consensus:       NO(0x00) | MAYBE(0x10) | YES(0xFF)                            (§5.4 yes / no / maybe)
+Human-rights tag: NONE | TRANSMIT | RECEIVE | VERIFY | ARCHIVE | EVIDENCE      (§11.2)
 ```
+
+### Footer
+
+| Field | Size | Description |
+|-------|-----:|-------------|
+| magic | 9 | `ENDNSIGII` |
+| segment_count | 8 | number of trident segments (`3`) |
+| final_hash | 64 | SHA-256 of `payload ‖ channel_table_hash`, hex |
+| signature | 64 | reserved for Ed25519 (§ roadmap); zero-filled today |
+
+Containers written by pre-0.1 builds ended with the 8-byte marker `ENDSIGII`;
+`inspect` / `verify` still read those, but every new container is written with
+`ENDNSIGII`.
 
 ---
 
 ## SDK API
 
 ```typescript
-import { wrap, inspect, verify, extract } from "@obinexusltd/nsigii";
+import { wrapFile, inspectFile, verifyFile, extractFile } from "nsigii";
 
-// Wrap
-const outPath = wrap("document.pdf");
+// Wrap → writes "document.pdf.nsigii", returns its path
+const outPath = wrapFile("document.pdf");
 
 // Inspect
-const meta = inspect("document.pdf.nsigii");
+const meta = inspectFile("document.pdf.nsigii");
 console.log(meta.header.payloadHash);
+console.log(meta.footer.finalHash);
 
 // Verify
-const result = verify("document.pdf.nsigii");
+const result = verifyFile("document.pdf.nsigii");
 // result.consensus → "YES" | "NO" | "MAYBE"
 
 // Extract
-const extracted = extract("document.pdf.nsigii");
+const extracted = extractFile("document.pdf.nsigii");
 ```
 
 ---
@@ -309,9 +343,13 @@ nsigii/
 ├── test/
 │   ├── wrap.test.ts
 │   ├── inspect.test.ts
-│   └── extract.test.ts
+│   ├── verify.test.ts
+│   ├── extract.test.ts
+│   ├── footer.test.ts       # ENDNSIGII terminating marker
+│   └── viewer.test.ts       # container is recognised by examples/nsigii-viewer.html
 └── examples/
     ├── sample.txt
+    ├── nsigii-viewer.html
     └── README.md
 ```
 

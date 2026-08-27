@@ -1,0 +1,1069 @@
+{
+  "system": "NSIGII v0.7.0",
+  "author": "Nnamdi Michael Okpala (OBINexus)",
+  "date": "2026-02-07",
+  "simulation_results": [
+    {
+      "step": 1,
+      "state": "OPEN",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.7717948717948717,
+            0.3282051282051282,
+            2.0
+          ],
+          [
+            0.3282051282051282,
+            0.7717948717948717,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.4435897435897435
+          ]
+        ],
+        "determinant": -8.583550953320184,
+        "biorder": 0.7717948717948717,
+        "bichaos": 0.3282051282051282,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-8.5836, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.4261219780261025,
+            0.4829689310648067,
+            0.2563041813305742
+          ],
+          [
+            0.4829689310648068,
+            0.4261219780261024,
+            -0.2563041813305743
+          ],
+          [
+            0.25630418133057425,
+            -0.25630418133057425,
+            -0.05684695303870428
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "original_biorder": 0.7717948717948717,
+        "original_bichaos": 0.3282051282051282,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.455116",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 2,
+      "state": "ENTER",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.7717948717948717,
+            0.3282051282051282,
+            0.0
+          ],
+          [
+            0.3282051282051282,
+            0.7717948717948717,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.4435897435897435
+          ]
+        ],
+        "determinant": 0.21644904667981582,
+        "biorder": 0.7717948717948717,
+        "bichaos": 0.3282051282051282,
+        "biambiguity": 0,
+        "interpretation": "STABLE ORDERED: det=0.2164, order dominates, low entropy"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            1.581713084603258,
+            -0.6726221755123492,
+            0.0
+          ],
+          [
+            -0.672622175512349,
+            1.5817130846032583,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            2.2543352601156075
+          ]
+        ],
+        "decoded_vector": [
+          0.9999999999999999,
+          0.0,
+          0.0
+        ],
+        "original_biorder": 0.7717948717948717,
+        "original_bichaos": 0.3282051282051282,
+        "original_biambiguity": 0,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.455116",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 3,
+      "state": "CLOSE",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.6606837606837607,
+            0.4393162393162393,
+            0.0
+          ],
+          [
+            0.4393162393162393,
+            0.6606837606837607,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.22136752136752136
+          ]
+        ],
+        "determinant": 0.053903937468040036,
+        "biorder": 0.6606837606837607,
+        "bichaos": 0.4393162393162393,
+        "biambiguity": 0,
+        "interpretation": "STABLE ORDERED: det=0.0539, order dominates, low entropy"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            2.7132327132327134,
+            -1.804141804141804,
+            0.0
+          ],
+          [
+            -1.804141804141804,
+            2.713232713232713,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            4.517374517374518
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "original_biorder": 0.6606837606837607,
+        "original_bichaos": 0.4393162393162393,
+        "original_biambiguity": 0,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.456586",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 4,
+      "state": "EXIT",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.6051282051282051,
+            0.4948717948717949,
+            2.0
+          ],
+          [
+            0.4948717948717949,
+            0.6051282051282051,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.1102564102564102
+          ]
+        ],
+        "determinant": -8.786627876397109,
+        "biorder": 0.6051282051282051,
+        "bichaos": 0.4948717948717949,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-8.7866, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.44764394164493426,
+            0.46144696744597474,
+            0.2503804680188748
+          ],
+          [
+            0.4614469674459748,
+            0.4476439416449342,
+            -0.2503804680188748
+          ],
+          [
+            0.25038046801887487,
+            -0.25038046801887487,
+            -0.013803025801040529
+          ]
+        ],
+        "decoded_vector": [
+          0.9999999999999999,
+          0.0,
+          1.3877787807814457e-17
+        ],
+        "original_biorder": 0.6051282051282051,
+        "original_bichaos": 0.4948717948717949,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.457594",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 5,
+      "state": "STOP",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.5717948717948718,
+            0.4615384615384615,
+            1.0
+          ],
+          [
+            0.4615384615384615,
+            0.5717948717948718,
+            -1.0
+          ],
+          [
+            1.0,
+            -1.0,
+            0.11025641025641025
+          ]
+        ],
+        "determinant": -2.054104974797282,
+        "biorder": 0.5717948717948718,
+        "bichaos": 0.4615384615384615,
+        "biambiguity": 1,
+        "interpretation": "INVERTED: det=-2.0541, negative determinant indicates polarity reversal"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.45613829941935674,
+            0.5116036360645143,
+            0.5030577044560792
+          ],
+          [
+            0.5116036360645142,
+            0.45613829941935685,
+            -0.5030577044560792
+          ],
+          [
+            0.5030577044560792,
+            -0.5030577044560792,
+            -0.055465336645157445
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          4.163336342344337e-17
+        ],
+        "original_biorder": 0.5717948717948718,
+        "original_bichaos": 0.4615384615384615,
+        "original_biambiguity": 1,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.457594",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 6,
+      "state": "START",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.5495726495726495,
+            0.4393162393162393,
+            2.0
+          ],
+          [
+            0.4393162393162393,
+            0.5495726495726495,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.1102564102564102
+          ]
+        ],
+        "determinant": -7.899089707064068,
+        "biorder": 0.5495726495726495,
+        "bichaos": 0.4393162393162393,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-7.8991, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.4987164646275697,
+            0.5125194904286101,
+            0.2503804680188748
+          ],
+          [
+            0.5125194904286102,
+            0.4987164646275696,
+            -0.2503804680188748
+          ],
+          [
+            0.25038046801887487,
+            -0.25038046801887487,
+            -0.013803025801040529
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          -1.3877787807814457e-17
+        ],
+        "original_biorder": 0.5495726495726495,
+        "original_bichaos": 0.4393162393162393,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: -0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.457594",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 7,
+      "state": "OPEN",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.5813186813186814,
+            0.42344322344322344,
+            3.0
+          ],
+          [
+            0.42344322344322344,
+            0.5813186813186814,
+            -3.0
+          ],
+          [
+            3.0,
+            -3.0,
+            0.15787545787545793
+          ]
+        ],
+        "determinant": -18.060670936656802,
+        "biorder": 0.5813186813186814,
+        "bichaos": 0.42344322344322344,
+        "biambiguity": 3,
+        "interpretation": "INVERTED AMBIGUOUS: det=-18.0607, unresolved channels=3, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.49323882142909176,
+            0.5020218420780173,
+            0.16689777056774646
+          ],
+          [
+            0.5020218420780171,
+            0.49323882142909187,
+            -0.16689777056774646
+          ],
+          [
+            0.16689777056774646,
+            -0.16689777056774646,
+            -0.008783020648925364
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          3.469446951953614e-18
+        ],
+        "original_biorder": 0.5813186813186814,
+        "original_bichaos": 0.42344322344322344,
+        "original_biambiguity": 3,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.457594",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 8,
+      "state": "ENTER",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.6051282051282051,
+            0.4115384615384616,
+            2.0
+          ],
+          [
+            0.4115384615384616,
+            0.6051282051282051,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.1935897435897435
+          ]
+        ],
+        "determinant": -8.095231728029805,
+        "biorder": 0.6051282051282051,
+        "bichaos": 0.4115384615384616,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-8.0952, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.47964697199289535,
+            0.503959585384154,
+            0.2511766681481026
+          ],
+          [
+            0.503959585384154,
+            0.4796469719928953,
+            -0.2511766681481026
+          ],
+          [
+            0.2511766681481026,
+            -0.2511766681481026,
+            -0.024312613391258637
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          -6.938893903907228e-18
+        ],
+        "original_biorder": 0.6051282051282051,
+        "original_bichaos": 0.4115384615384616,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: -0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.459201",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 9,
+      "state": "CLOSE",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.5866096866096866,
+            0.4393162393162393,
+            2.0
+          ],
+          [
+            0.4393162393162393,
+            0.5866096866096866,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.1472934472934473
+          ]
+        ],
+        "determinant": -8.185149575505491,
+        "biorder": 0.5866096866096866,
+        "bichaos": 0.4393162393162393,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-8.1851, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.47813374709182865,
+            0.49659549478542764,
+            0.250679823615213
+          ],
+          [
+            0.4965954947854277,
+            0.4781337470918286,
+            -0.250679823615213
+          ],
+          [
+            0.250679823615213,
+            -0.250679823615213,
+            -0.01846174769359902
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "original_biorder": 0.5866096866096866,
+        "original_bichaos": 0.4393162393162393,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.459201",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    },
+    {
+      "step": 10,
+      "state": "EXIT",
+      "suffering": {
+        "sigma": 4.5,
+        "zone": "CATASTROPHIC",
+        "N": 10,
+        "R": 7,
+        "K": 1.5
+      },
+      "encoding": {
+        "encoding_matrix": [
+          [
+            0.5717948717948718,
+            0.4615384615384615,
+            2.0
+          ],
+          [
+            0.4615384615384615,
+            0.5717948717948718,
+            -2.0
+          ],
+          [
+            2.0,
+            -2.0,
+            0.11025641025641025
+          ]
+        ],
+        "determinant": -8.254104974797281,
+        "biorder": 0.5717948717948718,
+        "bichaos": 0.4615384615384615,
+        "biambiguity": 2,
+        "interpretation": "INVERTED AMBIGUOUS: det=-8.2541, unresolved channels=2, polarity reversed"
+      },
+      "decoded": {
+        "status": "DECODED",
+        "inverse_matrix": [
+          [
+            0.47696945484141534,
+            0.49077248064245577,
+            0.2503804680188748
+          ],
+          [
+            0.4907724806424559,
+            0.47696945484141523,
+            -0.2503804680188748
+          ],
+          [
+            0.25038046801887487,
+            -0.25038046801887487,
+            -0.013803025801040536
+          ]
+        ],
+        "decoded_vector": [
+          1.0,
+          1.1102230246251565e-16,
+          0.0
+        ],
+        "original_biorder": 0.5717948717948718,
+        "original_bichaos": 0.4615384615384615,
+        "original_biambiguity": 2,
+        "decoded_interpretation": {
+          "component_0": "Order component: 1.0000",
+          "component_1": "Chaos component: 0.0000",
+          "component_2": "Ambiguity component: 0.0000"
+        }
+      },
+      "here_now": {
+        "timestamp": "2026-02-07T15:23:37.459201",
+        "space_time": "HERE-NOW",
+        "suffering_detected": {
+          "sigma": 4.5,
+          "zone": "CATASTROPHIC",
+          "N": 10,
+          "R": 7,
+          "K": 1.5
+        },
+        "loop_back": true,
+        "invariant": "All suffering detected in present moment"
+      }
+    }
+  ],
+  "encoding_matrices": [
+    {
+      "timestamp": "2026-02-07T15:23:37.425339",
+      "matrix": [
+        [
+          0.7717948717948717,
+          0.3282051282051282,
+          2.0
+        ],
+        [
+          0.3282051282051282,
+          0.7717948717948717,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.4435897435897435
+        ]
+      ],
+      "determinant": -8.583550953320184,
+      "biorder": 0.7717948717948717,
+      "bichaos": 0.3282051282051282,
+      "biambiguity": 2,
+      "state": "OPEN"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.455116",
+      "matrix": [
+        [
+          0.7717948717948717,
+          0.3282051282051282,
+          0.0
+        ],
+        [
+          0.3282051282051282,
+          0.7717948717948717,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.4435897435897435
+        ]
+      ],
+      "determinant": 0.21644904667981582,
+      "biorder": 0.7717948717948717,
+      "bichaos": 0.3282051282051282,
+      "biambiguity": 0,
+      "state": "ENTER"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.456586",
+      "matrix": [
+        [
+          0.6606837606837607,
+          0.4393162393162393,
+          0.0
+        ],
+        [
+          0.4393162393162393,
+          0.6606837606837607,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.22136752136752136
+        ]
+      ],
+      "determinant": 0.053903937468040036,
+      "biorder": 0.6606837606837607,
+      "bichaos": 0.4393162393162393,
+      "biambiguity": 0,
+      "state": "CLOSE"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.456586",
+      "matrix": [
+        [
+          0.6051282051282051,
+          0.4948717948717949,
+          2.0
+        ],
+        [
+          0.4948717948717949,
+          0.6051282051282051,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.1102564102564102
+        ]
+      ],
+      "determinant": -8.786627876397109,
+      "biorder": 0.6051282051282051,
+      "bichaos": 0.4948717948717949,
+      "biambiguity": 2,
+      "state": "EXIT"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.457594",
+      "matrix": [
+        [
+          0.5717948717948718,
+          0.4615384615384615,
+          1.0
+        ],
+        [
+          0.4615384615384615,
+          0.5717948717948718,
+          -1.0
+        ],
+        [
+          1.0,
+          -1.0,
+          0.11025641025641025
+        ]
+      ],
+      "determinant": -2.054104974797282,
+      "biorder": 0.5717948717948718,
+      "bichaos": 0.4615384615384615,
+      "biambiguity": 1,
+      "state": "STOP"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.457594",
+      "matrix": [
+        [
+          0.5495726495726495,
+          0.4393162393162393,
+          2.0
+        ],
+        [
+          0.4393162393162393,
+          0.5495726495726495,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.1102564102564102
+        ]
+      ],
+      "determinant": -7.899089707064068,
+      "biorder": 0.5495726495726495,
+      "bichaos": 0.4393162393162393,
+      "biambiguity": 2,
+      "state": "START"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.457594",
+      "matrix": [
+        [
+          0.5813186813186814,
+          0.42344322344322344,
+          3.0
+        ],
+        [
+          0.42344322344322344,
+          0.5813186813186814,
+          -3.0
+        ],
+        [
+          3.0,
+          -3.0,
+          0.15787545787545793
+        ]
+      ],
+      "determinant": -18.060670936656802,
+      "biorder": 0.5813186813186814,
+      "bichaos": 0.42344322344322344,
+      "biambiguity": 3,
+      "state": "OPEN"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.459201",
+      "matrix": [
+        [
+          0.6051282051282051,
+          0.4115384615384616,
+          2.0
+        ],
+        [
+          0.4115384615384616,
+          0.6051282051282051,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.1935897435897435
+        ]
+      ],
+      "determinant": -8.095231728029805,
+      "biorder": 0.6051282051282051,
+      "bichaos": 0.4115384615384616,
+      "biambiguity": 2,
+      "state": "ENTER"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.459201",
+      "matrix": [
+        [
+          0.5866096866096866,
+          0.4393162393162393,
+          2.0
+        ],
+        [
+          0.4393162393162393,
+          0.5866096866096866,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.1472934472934473
+        ]
+      ],
+      "determinant": -8.185149575505491,
+      "biorder": 0.5866096866096866,
+      "bichaos": 0.4393162393162393,
+      "biambiguity": 2,
+      "state": "CLOSE"
+    },
+    {
+      "timestamp": "2026-02-07T15:23:37.459201",
+      "matrix": [
+        [
+          0.5717948717948718,
+          0.4615384615384615,
+          2.0
+        ],
+        [
+          0.4615384615384615,
+          0.5717948717948718,
+          -2.0
+        ],
+        [
+          2.0,
+          -2.0,
+          0.11025641025641025
+        ]
+      ],
+      "determinant": -8.254104974797281,
+      "biorder": 0.5717948717948718,
+      "bichaos": 0.4615384615384615,
+      "biambiguity": 2,
+      "state": "EXIT"
+    }
+  ]
+}

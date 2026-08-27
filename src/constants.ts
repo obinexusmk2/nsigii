@@ -3,7 +3,11 @@
  */
 
 export const NSIGII_MAGIC = Buffer.from("NSIGII\0", "ascii");
-export const NSIGII_FOOTER_MAGIC = Buffer.from("ENDSIGII", "ascii");
+/** File-terminating marker. A conformant .nsigii container ends with the ASCII
+ *  bytes `ENDNSIGII` followed by the segment count and the final hash. */
+export const NSIGII_FOOTER_MAGIC = Buffer.from("ENDNSIGII", "ascii");
+/** Footer marker written by pre-0.1 builds; still accepted on read. */
+export const NSIGII_FOOTER_MAGIC_LEGACY = Buffer.from("ENDSIGII", "ascii");
 export const NSIGII_VERSION = "7.0.0" as const;
 
 export const NSIGII_CHANNEL_TRANSMIT = 0;

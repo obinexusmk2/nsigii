@@ -1,5 +1,5 @@
 {
-  "name": "@obinexusltd/nsigii",
+  "name": "nsigii",
   "version": "0.1.0",
   "description": "NSIGII Linkable-Then-Executable constitutional verification container runtime",
   "main": "dist/index.js",

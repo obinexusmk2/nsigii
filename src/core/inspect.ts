@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { NSIGII_MAGIC } from "../constants.js";
+import { FOOTER_MAGIC, FOOTER_MAGIC_LEGACY } from "../format/footer.js";
 import { HASH_HEX_LENGTH } from "../format/header.js";
 import { SEGMENT_ENTRY_SIZE, TRIDENT_SEGMENT_COUNT } from "../format/segment.js";
 import type { NSIGIIHeader, NSIGIIChannel, NSIGIISegment, NSIGIIVerification, NSIGIIFooter } from "../types.js";
@@ -22,8 +23,12 @@ export function inspectFile(inputPath: string): InspectResult {
   const buf = readFileSync(resolve(inputPath));
   if (!buf.subarray(0, 6).equals(NSIGII_MAGIC.subarray(0, 6))) throw new Error("Not a valid NSIGII file");
 
-  const footerMagic = Buffer.from("ENDSIGII", "ascii");
-  const footerPos = buf.lastIndexOf(footerMagic);
+  let footerMagicLen = FOOTER_MAGIC.length;
+  let footerPos = buf.lastIndexOf(Buffer.from(FOOTER_MAGIC, "ascii"));
+  if (footerPos === -1) {
+    footerPos = buf.lastIndexOf(Buffer.from(FOOTER_MAGIC_LEGACY, "ascii"));
+    footerMagicLen = FOOTER_MAGIC_LEGACY.length;
+  }
   if (footerPos === -1) throw new Error("NSIGII footer not found");
 
   let off = 7;
@@ -100,8 +105,7 @@ export function inspectFile(inputPath: string): InspectResult {
     consensus: byteToConsensus(consensusByte), consensusScore, humanRightsTag: byteToHrTag(hrByte),
   };
 
-  off = footerPos;
-  off += 8;
+  off = footerPos + footerMagicLen;
   const fSegmentCount = Number(buf.readBigUInt64LE(off)); off += 8;
   const finalHash = buf.toString("utf8", off, off + HASH_HEX_LENGTH).replace(/\0/g, ""); off += HASH_HEX_LENGTH;
   const signature = buf.toString("utf8", off, off + 64).replace(/\0/g, "") || undefined;
