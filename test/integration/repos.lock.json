@@ -1,0 +1,13 @@
+{
+  "note": "Pinned revisions for the cross-repo integration workflow. Bump these in lockstep with .github/workflows/integration.yml (env: NSIGII_PROJECT_REF / NSIGII_VIEWER_REF).",
+  "nsigii_project": {
+    "repo": "obinexus/nsigii_project",
+    "ref": "f840d7f250d4cb89a54fb9778d5d5f318ab11eb5",
+    "provides": "CORE_V1 C codec — native CLI (`make`) and WASM (`make wasm`)"
+  },
+  "nsigii_viewer": {
+    "repo": "obinexus/nsigii_viewer",
+    "ref": "ac96febde09865389562f1f0fa8895a582a3de80",
+    "provides": "legacy 7.0.0 / 7.1.0A codec stream + the donut.nsigii fixture"
+  }
+}

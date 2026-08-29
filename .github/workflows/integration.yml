@@ -1,0 +1,122 @@
+name: NSIGII cross-repo integration
+
+# Proves the three NSIGII layers interoperate, from CI state rather than a
+# developer machine. The C core and the legacy viewer are checked out read-only
+# at the revisions pinned below (keep in sync with test/integration/repos.lock.json).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NSIGII_PROJECT_REF: f840d7f250d4cb89a54fb9778d5d5f318ab11eb5
+  NSIGII_VIEWER_REF: ac96febde09865389562f1f0fa8895a582a3de80
+
+jobs:
+  matrix:
+    name: A–K roundtrip matrix (native C core)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout obinexusmk2/nsigii (this repo)
+        uses: actions/checkout@v4
+
+      - name: Checkout obinexus/nsigii_project (CORE_V1 C codec)
+        uses: actions/checkout@v4
+        with:
+          repository: obinexus/nsigii_project
+          ref: ${{ env.NSIGII_PROJECT_REF }}
+          path: _c
+
+      - name: Checkout obinexus/nsigii_viewer (legacy stream + donut fixture)
+        uses: actions/checkout@v4
+        with:
+          repository: obinexus/nsigii_viewer
+          ref: ${{ env.NSIGII_VIEWER_REF }}
+          path: _viewer
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build the C core
+        run: make -C _c
+
+      - name: C core self-tests
+        run: make -C _c test
+
+      - name: Install + build the runtime
+        run: |
+          npm ci
+          npm run build
+
+      - name: Unit tests (with the C core available)
+        run: npm test
+        env:
+          NSIGII_C_BIN: ${{ github.workspace }}/_c/build/nsigii
+
+      - name: Integration matrix A–K
+        run: npm run test:integration
+        env:
+          NSIGII_C_BIN: ${{ github.workspace }}/_c/build/nsigii
+          NSIGII_VIEWER_REPO: ${{ github.workspace }}/_viewer
+
+      - name: CLI end-to-end smoke (raw → C pack → wrap → extract -r → cmp)
+        env:
+          NSIGII_C_BIN: ${{ github.workspace }}/_c/build/nsigii
+        run: |
+          set -euo pipefail
+          head -c 4096 /dev/urandom > raw.dat
+          _c/build/nsigii pack raw.dat raw.core.nsigii
+          node dist/cli.js wrap raw.core.nsigii -o raw.wrapped.nsigii
+          node dist/cli.js dispatch --chain raw.wrapped.nsigii
+          node dist/cli.js extract -r raw.wrapped.nsigii -o roundtrip.dat
+          cmp raw.dat roundtrip.dat
+          echo "cross-repo roundtrip: byte-for-byte identical"
+
+      - name: Working trees clean after tests
+        run: |
+          git -C _c   diff --exit-code
+          git -C _viewer diff --exit-code
+          git diff --exit-code
+
+  wasm:
+    name: CORE_V1 WASM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout obinexus/nsigii_project
+        uses: actions/checkout@v4
+        with:
+          repository: obinexus/nsigii_project
+          ref: ${{ env.NSIGII_PROJECT_REF }}
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.69
+
+      - name: make wasm
+        run: make wasm
+
+      - name: Assert artifacts exist
+        run: |
+          test -s bindings/web/nsigii.js
+          test -s bindings/web/nsigii.wasm
+          echo "wasm build ok: $(wc -c < bindings/web/nsigii.wasm) bytes"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nsigii-core-wasm
+          path: |
+            bindings/web/nsigii.js
+            bindings/web/nsigii.wasm
+          if-no-files-found: error
+          retention-days: 14

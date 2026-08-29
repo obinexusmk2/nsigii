@@ -394,7 +394,13 @@ nsigii/
 │   ├── verify.test.ts
 │   ├── extract.test.ts
 │   ├── footer.test.ts       # ENDNSIGII terminating marker
-│   └── viewer.test.ts       # container is recognised by examples/nsigii-viewer.html
+│   ├── viewer.test.ts       # container is recognised by examples/nsigii-viewer.html
+│   ├── dispatch.test.ts     # 4-way format detection
+│   ├── unwrap.test.ts       # bounded nested dispatch
+│   ├── fixtures/            # tiny byte-exact vectors + make-fixtures.mjs
+│   └── integration/         # cross-repo A–K matrix (npm run test:integration)
+├── .github/workflows/
+│   └── integration.yml      # checks out the 3 repos at pinned refs, proves interop
 └── examples/
     ├── sample.txt
     ├── nsigii-viewer.html

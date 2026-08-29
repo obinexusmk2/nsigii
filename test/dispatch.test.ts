@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   detectNsigiiKind, detectNsigiiKindFromFile, describeNsigiiKind, NSIGII_KIND,
 } from "../src/format/dispatch.js";
@@ -8,22 +9,20 @@ import { detectNsigiiVariant } from "../src/core/variant.js";
 import { wrapFile } from "../src/core/wrap.js";
 
 const FIX = resolve(__dirname, "fixtures");
-const TMP = resolve(__dirname, "tmp");
-const SAMPLE = resolve(TMP, "dispatch-sample.txt");
+let TMP: string;
 let wrapper: string;
 
 /** Build an 8-byte head: "NSIGII" + byte6 + byte7. */
 const head = (b6: number, b7: number) => Buffer.from([0x4e, 0x53, 0x49, 0x47, 0x49, 0x49, b6, b7]);
 
 beforeAll(() => {
-  mkdirSync(TMP, { recursive: true });
-  writeFileSync(SAMPLE, "dispatch wrapper fixture payload");
-  wrapper = wrapFile(SAMPLE); // carries a timestamp — built here, not committed
+  TMP = mkdtempSync(join(tmpdir(), "nsigii-dispatch-test-"));
+  const sample = join(TMP, "dispatch-sample.txt");
+  writeFileSync(sample, "dispatch wrapper fixture payload");
+  wrapper = wrapFile(sample); // carries a timestamp — built here, not committed
 });
 
-afterAll(() => {
-  [SAMPLE, wrapper].forEach((f) => { if (f && existsSync(f)) unlinkSync(f); });
-});
+afterAll(() => rmSync(TMP, { recursive: true, force: true }));
 
 describe("detectNsigiiKind — byte-level", () => {
   it("classifies the three magics", () => {
