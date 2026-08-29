@@ -9,20 +9,30 @@
 
 ---
 
-## Two `.nsigii` formats
+## Three NSIGII layers
 
-The extension and the `NSIGII` magic are shared by two unrelated layouts. Tell
-them apart by **byte 7**:
+The `NSIGII` magic and the `.nsigii` extension are shared by **three unrelated
+binary layouts**, owned by three repositories. They are not the same format and
+are never collapsed into one:
 
-| | byte 7 | Layout | Tooling |
+| Layer | Magic (bytes 0–7) | Owner | Role |
 |---|---|---|---|
-| **Constitutional wrapper** | `0x07` (version_major) | 7-byte magic `NSIGII\0`, trident header, `ENDNSIGII` footer | `wrap` / `inspect` / `verify` / `extract`; viewer shows its verified receipt |
-| **Codec stream** | `0x00` (magic padding) | 8-byte magic `NSIGII\0\0`, 32-byte header, raw DEFLATE frames | `inspect` / `verify` / `view`; [`examples/`](examples/README.md) render its frames |
+| **`CORE_V1`** generic byte container | `NSIGII01` | [`obinexus/nsigii_project`](https://github.com/obinexus/nsigii_project) | transport — frames arbitrary bytes, CRC‑32, streaming, C core + WASM. `decode(encode(bytes)) == bytes`. |
+| **Constitutional wrapper** verification envelope | `NSIGII\0` + `0x07` at byte 7 | [`obinexusmk2/nsigii`](https://github.com/obinexusmk2/nsigii) *(this repo)* | verification — SHA‑256 payload hash, trident channels, 3/3 consensus, `ENDNSIGII` footer. Its payload may be a `CORE_V1` object. |
+| **Legacy codec stream** media / state format | `NSIGII\0\0` | [`obinexus/nsigii_viewer`](https://github.com/obinexus/nsigii_viewer) | interpretation — `7.0.0` I420 video, `7.1.0A` coloured‑ASCII rotation state, raw DEFLATE frames. Rendered by NSIGII Scope. |
 
-The rest of this README documents the **wrapper**. The codec stream — a data
-file whose interactivity is baked in as state — is documented under
-[`examples/`](examples/README.md). `run` is intentionally verification-only:
-NSIGII artifacts are data, so the CLI never executes their payloads.
+> **container mechanics** ≠ **constitutional verification** ≠ **application interpretation**
+
+Detection is by the first 8 bytes only — see
+[`docs/DISPATCH.md`](docs/DISPATCH.md). How the layers compose (optionally — an
+arbitrary file does not need to be media or interactive to use `CORE_V1`) is in
+[`docs/NSIGII-INTEGRATION.md`](docs/NSIGII-INTEGRATION.md).
+
+The rest of this README documents the **constitutional wrapper**. The legacy
+codec stream — a data file whose interactivity is baked in as state — is
+documented under [`examples/`](examples/README.md). `run` and `view` are
+intentionally verification‑only: NSIGII artifacts are data, so the CLI never
+executes their payloads.
 
 ---
 
