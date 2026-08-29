@@ -115,11 +115,11 @@ Usage:
   nsigii <command> [options]
 
 Commands:
-  dispatch <file>   Identify which of the three NSIGII layouts a file is
+  dispatch <file>   Identify the NSIGII layout; --chain resolves nested containers
   wrap <file>       Wrap file into NSIGII container
-  inspect <file>    Inspect NSIGII metadata
+  inspect <file>    Inspect NSIGII metadata (CORE_V1 via the C core)
   verify <file>     Verify payload integrity
-  extract <file>    Extract payload
+  extract <file>    Extract payload; -r unwraps nested containers to the innermost
   link              Resolve linked artifacts
   topology          Inspect trident topology
   run               Verify a data-only artifact; never execute a payload
@@ -130,6 +130,19 @@ Options:
   -v, --version
   -h, --help
 ```
+
+### CORE_V1 support
+
+`dispatch --chain`, `extract -r`, and `inspect` / `extract` on a `CORE_V1`
+container decode the `NSIGII01` layer through the **C core**, never a
+re-implementation. Point `NSIGII_C_BIN` at the `nsigii` binary from
+[`obinexus/nsigii_project`](https://github.com/obinexus/nsigii_project) (built
+with `make`). Without it, those paths report `core-unavailable` and stop — they
+never guess. Constitutional-wrapper and legacy-codec handling need nothing extra.
+
+Nested unwrapping is bounded to 4 hops with cycle detection, verifies every
+wrapper to 3/3 before descending, and treats `LEGACY_CODEC_STREAM` / `UNKNOWN`
+as leaves. No extracted payload is ever executed.
 
 ---
 

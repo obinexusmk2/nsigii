@@ -4,7 +4,10 @@
 export { wrapFile } from "./core/wrap.js";
 export { inspectFile } from "./core/inspect.js";
 export { verifyFile } from "./core/verify.js";
-export { extractFile } from "./core/extract.js";
+export { extractFile, extractPayload } from "./core/extract.js";
+export { unwrapFile, unwrapBytes, MAX_UNWRAP_DEPTH } from "./core/unwrap.js";
+export type { UnwrapResult, UnwrapHop, UnwrapOutcome, UnwrapOptions } from "./core/unwrap.js";
+export { coreDecode, coreEncode, coreConfigured, CoreUnavailableError } from "./runtime/adapters/core.js";
 export { detectNsigiiVariant } from "./core/variant.js";
 export {
   detectNsigiiKind, detectNsigiiKindFromFile, describeNsigiiKind, NSIGII_KIND,

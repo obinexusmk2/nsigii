@@ -9,7 +9,18 @@ export interface ExtractResult {
   consensus: string;
 }
 
-export function extractFile(inputPath: string, outputPath?: string): ExtractResult {
+export interface ExtractedPayload {
+  bytes: Buffer;
+  originalFilename?: string;
+  verified: boolean;
+  consensus: string;
+}
+
+/**
+ * Verify a constitutional wrapper and return its payload bytes in memory.
+ * Throws unless consensus reaches 3/3 `YES` — verification gates extraction.
+ */
+export function extractPayload(inputPath: string): ExtractedPayload {
   const resolved = resolve(inputPath);
   const buf = readFileSync(resolved);
   const info = inspectFile(inputPath);
@@ -19,11 +30,22 @@ export function extractFile(inputPath: string, outputPath?: string): ExtractResu
     throw new Error(`NSIGII container did not reach required 3/3 verification consensus (${verifyResult.consensusCount}/3) — extraction blocked`);
   }
 
-  const payload = buf.subarray(info.payloadOffset, info.payloadOffset + info.payloadSize);
+  return {
+    bytes: buf.subarray(info.payloadOffset, info.payloadOffset + info.payloadSize),
+    originalFilename: info.header.originalFilename,
+    verified: true,
+    consensus: verifyResult.consensus,
+  };
+}
+
+export function extractFile(inputPath: string, outputPath?: string): ExtractResult {
+  const resolved = resolve(inputPath);
+  const { bytes, originalFilename, verified, consensus } = extractPayload(inputPath);
+
   const dest = outputPath
     ? resolve(outputPath)
-    : resolve(dirname(resolved), info.header.originalFilename ?? basename(resolved).replace(/\.nsigii$/, ".extracted"));
+    : resolve(dirname(resolved), originalFilename ?? basename(resolved).replace(/\.nsigii$/, ".extracted"));
 
-  writeFileSync(dest, payload);
-  return { outputPath: dest, verified: verifyResult.consensus === "YES", consensus: verifyResult.consensus };
+  writeFileSync(dest, bytes);
+  return { outputPath: dest, verified, consensus };
 }

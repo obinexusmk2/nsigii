@@ -2,15 +2,17 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
-import { openSync, readSync, closeSync, statSync } from "node:fs";
+import { openSync, readSync, closeSync, statSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { wrapFile } from "./core/wrap.js";
 import { inspectFile } from "./core/inspect.js";
 import { verifyFile } from "./core/verify.js";
 import { extractFile } from "./core/extract.js";
+import { unwrapFile } from "./core/unwrap.js";
 import { linkArtifacts, resolveTopology } from "./core/link.js";
 import { detectNsigiiVariant } from "./core/variant.js";
-import { detectNsigiiKind, describeNsigiiKind, NSIGII_KIND } from "./format/dispatch.js";
+import { detectNsigiiKind, detectNsigiiKindFromFile, describeNsigiiKind, NSIGII_KIND } from "./format/dispatch.js";
+import { coreDecode, CoreUnavailableError } from "./runtime/adapters/core.js";
 import { inspectCodecFile, verifyCodecFile } from "./core/codec.js";
 
 const program = new Command();
@@ -39,7 +41,8 @@ program
 program
   .command("dispatch <file>")
   .description("Identify which of the three NSIGII layouts a file is — read-only, never executes")
-  .action((file: string) => {
+  .option("--chain", "also resolve nested containers (needs the C core via NSIGII_C_BIN)")
+  .action((file: string, opts: { chain?: boolean }) => {
     let head: Buffer;
     let size: number;
     try {
@@ -94,6 +97,26 @@ program
       console.log(chalk.gray("─".repeat(40)));
       console.log(chalk.yellow(`Header recognised as ${kind}, but its body did not parse: ${err.message}`));
     }
+
+    if (opts.chain && (kind === NSIGII_KIND.CONSTITUTIONAL_WRAPPER || kind === NSIGII_KIND.CORE_V1)) {
+      console.log(chalk.gray("─".repeat(40)));
+      try {
+        const res = unwrapFile(file);
+        console.log(chalk.bold("Nesting chain:"));
+        for (const h of res.chain) {
+          const arrow = h.depth === 0 ? "" : "  ".repeat(h.depth) + "└ ";
+          console.log(`  ${arrow}${h.kind} — ${h.size} B${h.note ? chalk.gray("  (" + h.note + ")") : ""}`);
+        }
+        if (res.outcome === "resolved") {
+          console.log(`  ${chalk.bold("Outcome:")} ${chalk.green(`resolved to ${res.finalKind} (${res.finalBytes.length} B)`)}`);
+          console.log(chalk.gray("  Nothing was executed. Use `nsigii extract -r` to write the resolved bytes."));
+        } else {
+          console.log(`  ${chalk.bold("Outcome:")} ${chalk.yellow(res.outcome + (res.message ? " — " + res.message : ""))}`);
+        }
+      } catch (err: any) {
+        console.log(chalk.yellow(`Chain resolution stopped: ${err.message}`));
+      }
+    }
   });
 
 program
@@ -101,7 +124,18 @@ program
   .description("Inspect NSIGII container metadata")
   .action(async (file: string) => {
     try {
-      if (detectNsigiiVariant(file) === "codec") {
+      const kind = detectNsigiiKindFromFile(file);
+      if (kind === NSIGII_KIND.CORE_V1) {
+        const dec = coreDecode(readFileSync(resolve(file)));
+        console.log(chalk.bold("NSIGII CORE_V1 byte container"));
+        console.log(chalk.gray("─".repeat(40)));
+        console.log(`${chalk.bold("Decoded payload:")} ${dec.payloadSize} bytes`);
+        console.log(`${chalk.bold("Payload CRC-32:")}  ${dec.crc32 ?? "unavailable"}`);
+        console.log(`${chalk.bold("Owner:")}           obinexus/nsigii_project — FORMAT.md is authoritative`);
+        console.log(chalk.gray("Decoded bytes may be another NSIGII artifact; run `nsigii dispatch --chain`."));
+        return;
+      }
+      if (kind === NSIGII_KIND.LEGACY_CODEC_STREAM) {
         const info = inspectCodecFile(file);
         console.log(chalk.bold(`NSIGII codec stream v${info.version}`));
         console.log(chalk.gray("─".repeat(40)));
@@ -166,17 +200,45 @@ program
   .command("extract <file>")
   .description("Extract payload from NSIGII container")
   .option("-o, --output <path>", "output path")
-  .action(async (file: string, opts: { output?: string }) => {
+  .option("-r, --recursive", "unwrap nested containers to the innermost payload (bounded, never executes)")
+  .action(async (file: string, opts: { output?: string; recursive?: boolean }) => {
     const spinner = ora("Extracting payload...").start();
+    const derived = (suffix: string) =>
+      resolve(file.endsWith(".nsigii") ? file.slice(0, -7) : file + suffix);
     try {
-      if (detectNsigiiVariant(file) === "codec") {
+      if (opts.recursive) {
+        const res = unwrapFile(file, { output: opts.output ?? derived(".payload") });
+        spinner.stop();
+        for (const h of res.chain) console.log(chalk.gray(`  ${"  ".repeat(h.depth)}${h.kind} — ${h.size} B${h.note ? " (" + h.note + ")" : ""}`));
+        if (res.outcome !== "resolved") {
+          console.error(chalk.red(`Unwrap halted: ${res.outcome}${res.message ? " — " + res.message : ""}`));
+          process.exit(1);
+        }
+        console.log(chalk.green(`Unwrapped ${res.chain.length} layer(s) → ${res.outputPath} (${res.finalKind}, ${res.finalBytes.length} B)`));
+        return;
+      }
+
+      const kind = detectNsigiiKindFromFile(file);
+      if (kind === NSIGII_KIND.LEGACY_CODEC_STREAM) {
         throw new Error("Codec streams are frame data, not a wrapped original payload. Open them in nsigii-viewer.html or nsigii_play.py.");
       }
+      if (kind === NSIGII_KIND.UNKNOWN) {
+        throw new Error("Not a NSIGII container. Run `nsigii dispatch` for details.");
+      }
+      if (kind === NSIGII_KIND.CORE_V1) {
+        const dec = coreDecode(readFileSync(resolve(file)));
+        const dest = opts.output ? resolve(opts.output) : derived(".decoded");
+        writeFileSync(dest, dec.bytes);
+        spinner.succeed(chalk.green(`Decoded CORE_V1 → ${dest} (${dec.bytes.length} bytes${dec.crc32 ? ", crc32 " + dec.crc32 : ""})`));
+        return;
+      }
+
       const result = extractFile(file, opts.output);
       if (result.verified) spinner.succeed(chalk.green(`Extracted → ${result.outputPath} (verified)`));
       else spinner.warn(chalk.yellow(`Extracted → ${result.outputPath} (unverified)`));
     } catch (err: any) {
       spinner.fail(chalk.red(`Extraction failed: ${err.message}`));
+      if (err instanceof CoreUnavailableError) console.error(chalk.gray(err.message));
       process.exit(1);
     }
   });
