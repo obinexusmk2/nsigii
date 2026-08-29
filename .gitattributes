@@ -1,2 +1,13 @@
-# Test fixtures are byte-exact vectors — never convert line endings or munge them.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.pdf  binary
+*.mp4  binary
+*.wasm binary
+*.pyc  binary
+*.nsigii binary
+
+# byte-exact test vectors — never touch line endings
 test/fixtures/** -text
