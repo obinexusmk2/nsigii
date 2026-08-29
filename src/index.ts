@@ -8,6 +8,8 @@ export { extractFile, extractPayload } from "./core/extract.js";
 export { unwrapFile, unwrapBytes, MAX_UNWRAP_DEPTH } from "./core/unwrap.js";
 export type { UnwrapResult, UnwrapHop, UnwrapOutcome, UnwrapOptions } from "./core/unwrap.js";
 export { coreDecode, coreEncode, coreConfigured, CoreUnavailableError } from "./runtime/adapters/core.js";
+// Browser-safe constitutional verify/extract ships as ESM at dist/browser/constitutional.mjs
+// (Web Crypto, no Node imports) — imported directly by the viewer, not re-exported here.
 export { detectNsigiiVariant } from "./core/variant.js";
 export {
   detectNsigiiKind, detectNsigiiKindFromFile, describeNsigiiKind, NSIGII_KIND,

@@ -352,7 +352,7 @@ Full definitions in the integration test suite (Phase 6). Boundaries covered:
 | D | legacy donut → C encode → wrap → verify → extract → C decode | exact legacy donut bytes |
 | E | viewer opens original legacy donut | renders (frame count, non‑empty scope) |
 | F | viewer opens `CORE_V1`‑wrapped legacy donut | renders identically via the WASM adapter |
-| G | viewer opens wrapper → `CORE_V1` → legacy donut | renders identically (only if browser constitutional extraction is implemented) |
+| G | viewer opens wrapper → `CORE_V1` → legacy donut | browser Web-Crypto verify (3/3) → extract → WASM decode → renders identically |
 | H | corrupt `CORE_V1` CRC‑32 | decode fails |
 | I | corrupt constitutional hash | verify fails; extract refused |
 | J | unknown arbitrary payload | classified `UNKNOWN`; never executed; CLI refuses; viewer offers download only |
@@ -379,7 +379,7 @@ rewrite in a single commit; no force‑push; no history rewrite.
 | 5 | main | `CORE_V1` decode via the C core; bounded nested dispatch (`unwrap`) | delegated decode; depth cap |
 | 6 | main | cross‑repo integration tests A–K; multi‑repo CI | proves interop in CI |
 | 7 | `nsigii_viewer` | route `CORE_V1` through the WASM adapter before the legacy parser; correct `@obinexusltd/nsigii` → `nsigii` strings | legacy renderer untouched |
-| 8 | `nsigii_viewer` | optional: browser constitutional `verify` / `extract` before dispatch | gated on a browser‑safe build from main |
+| 8 | main + `nsigii_viewer` | browser constitutional `verify` / `extract` (`src/browser/constitutional.mts` → `dist/browser/constitutional.mjs`, Web Crypto); viewer verifies 3/3 then descends. Parity-tested against `src/core/verify.ts`. |
 
 **Definition of done:** all original tests pass; `CORE_V1` native + binding
 tests pass; WASM build succeeds; wrapper tests pass; the legacy viewer still
