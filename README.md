@@ -115,6 +115,7 @@ Usage:
   nsigii <command> [options]
 
 Commands:
+  dispatch <file>   Identify which of the three NSIGII layouts a file is
   wrap <file>       Wrap file into NSIGII container
   inspect <file>    Inspect NSIGII metadata
   verify <file>     Verify payload integrity

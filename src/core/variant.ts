@@ -1,19 +1,30 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { detectNsigiiKind, NSIGII_KIND } from "../format/dispatch.js";
 
 export type NSIGIIVariant = "wrapper" | "codec";
 
 /**
- * NSIGII has two data-only layouts which share the first six magic bytes.
- * The discriminator is deliberately structural: a v7 wrapper has its major
- * version at byte 7, while a codec stream reserves that byte as zero.
+ * The two NSIGII layouts this package reads directly: the constitutional
+ * wrapper and the legacy codec stream.
+ *
+ * @deprecated Prefer {@link detectNsigiiKind} / `detectNsigiiKindFromFile`,
+ * which also classify `CORE_V1` and `UNKNOWN`. This helper is kept for callers
+ * that only branch wrapper-vs-codec; it throws for the other two kinds.
  */
 export function detectNsigiiVariant(inputPath: string): NSIGIIVariant {
-  const bytes = readFileSync(resolve(inputPath));
-  if (bytes.length < 8 || bytes.subarray(0, 6).toString("ascii") !== "NSIGII" || bytes[6] !== 0) {
-    throw new Error("Not an NSIGII file: expected the NSIGII magic header");
+  const kind = detectNsigiiKind(readFileSync(resolve(inputPath)));
+  switch (kind) {
+    case NSIGII_KIND.CONSTITUTIONAL_WRAPPER:
+      return "wrapper";
+    case NSIGII_KIND.LEGACY_CODEC_STREAM:
+      return "codec";
+    case NSIGII_KIND.CORE_V1:
+      throw new Error(
+        "This is a CORE_V1 byte container (NSIGII01), not a wrapper or codec stream. " +
+          "Decode it with the C core (obinexus/nsigii_project) — `nsigii dispatch <file>` identifies it.",
+      );
+    default:
+      throw new Error("Not an NSIGII file: expected the NSIGII magic header");
   }
-  if (bytes[7] === 0x07) return "wrapper";
-  if (bytes[7] === 0x00) return "codec";
-  throw new Error(`Unknown NSIGII layout discriminator at byte 7: 0x${bytes[7].toString(16).padStart(2, "0")}`);
 }

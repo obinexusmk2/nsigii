@@ -1,0 +1,2 @@
+# Test fixtures are byte-exact vectors — never convert line endings or munge them.
+test/fixtures/** -text

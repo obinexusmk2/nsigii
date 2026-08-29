@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
+import { openSync, readSync, closeSync, statSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { wrapFile } from "./core/wrap.js";
 import { inspectFile } from "./core/inspect.js";
@@ -9,6 +10,7 @@ import { verifyFile } from "./core/verify.js";
 import { extractFile } from "./core/extract.js";
 import { linkArtifacts, resolveTopology } from "./core/link.js";
 import { detectNsigiiVariant } from "./core/variant.js";
+import { detectNsigiiKind, describeNsigiiKind, NSIGII_KIND } from "./format/dispatch.js";
 import { inspectCodecFile, verifyCodecFile } from "./core/codec.js";
 
 const program = new Command();
@@ -31,6 +33,66 @@ program
     } catch (err: any) {
       spinner.fail(chalk.red(`Wrap failed: ${err.message}`));
       process.exit(1);
+    }
+  });
+
+program
+  .command("dispatch <file>")
+  .description("Identify which of the three NSIGII layouts a file is — read-only, never executes")
+  .action((file: string) => {
+    let head: Buffer;
+    let size: number;
+    try {
+      const path = resolve(file);
+      size = statSync(path).size;
+      const fd = openSync(path, "r");
+      try {
+        head = Buffer.alloc(16);
+        const n = readSync(fd, head, 0, 16, 0);
+        head = head.subarray(0, n);
+      } finally {
+        closeSync(fd);
+      }
+    } catch (err: any) {
+      console.error(chalk.red(`Dispatch failed: ${err.message}`));
+      process.exit(1);
+    }
+
+    const kind = detectNsigiiKind(head);
+    const info = describeNsigiiKind(kind);
+    console.log(chalk.bold(`NSIGII dispatch — ${kind}`));
+    console.log(chalk.gray("─".repeat(40)));
+    console.log(`${chalk.bold("Layout:")}   ${info.label}`);
+    console.log(`${chalk.bold("Owner:")}    ${info.owner}`);
+    console.log(`${chalk.bold("Size:")}     ${size} bytes`);
+    console.log(`${chalk.bold("Next:")}     ${info.nextAction}`);
+
+    try {
+      if (kind === NSIGII_KIND.CONSTITUTIONAL_WRAPPER) {
+        const meta = inspectFile(file);
+        console.log(chalk.gray("─".repeat(40)));
+        console.log(`${chalk.bold("Payload:")}  ${meta.header.payloadSize} bytes, hint "${meta.header.formatHint ?? "unknown"}"`);
+        console.log(`${chalk.bold("Original:")} ${meta.header.originalFilename ?? "N/A"}`);
+        console.log(`${chalk.bold("Recorded consensus:")} ${meta.verification.consensus} — run \`nsigii verify\` for an independent 3/3 check`);
+      } else if (kind === NSIGII_KIND.LEGACY_CODEC_STREAM) {
+        const meta = inspectCodecFile(file);
+        console.log(chalk.gray("─".repeat(40)));
+        console.log(`${chalk.bold("Stream:")}   v${meta.version} — ${meta.kind === "ascii" ? "interactive ASCII rotation grid" : "I420 video timeline"}`);
+        console.log(`${chalk.bold("Geometry:")} ${meta.width} × ${meta.height}, ${meta.frameCount} frames (${meta.complete ? "complete" : "truncated"})`);
+        console.log(chalk.gray("Open in obinexus/nsigii_viewer — this CLI does not render media."));
+      } else if (kind === NSIGII_KIND.CORE_V1) {
+        console.log(chalk.gray("─".repeat(40)));
+        console.log(chalk.gray("Decode with the C core in obinexus/nsigii_project (CLI `unpack`, or the WASM build)."));
+        console.log(chalk.gray("The decoded bytes may themselves be another NSIGII artifact — re-run `dispatch` on them."));
+      } else {
+        console.log(chalk.gray("─".repeat(40)));
+        const preview = head.subarray(0, Math.min(head.length, 16)).toString("hex").replace(/(..)/g, "$1 ").trimEnd();
+        console.log(`${chalk.bold("First bytes:")} ${preview || "(empty)"}`);
+        console.log(chalk.yellow("Inert bytes — NSIGII will not decode, render, or execute this file."));
+      }
+    } catch (err: any) {
+      console.log(chalk.gray("─".repeat(40)));
+      console.log(chalk.yellow(`Header recognised as ${kind}, but its body did not parse: ${err.message}`));
     }
   });
 
