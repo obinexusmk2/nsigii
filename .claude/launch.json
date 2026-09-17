@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nsigii-static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:\\Users\\Nnamdi\\AppData\\Local\\Temp\\claude\\C--Users-Nnamdi-Projects-nsigii-nsigii\\52e81bf5-e77d-4404-93ff-d0df5d2474f0\\scratchpad\\static-server.mjs",
+        "C:\\Users\\Nnamdi\\Projects\\nsigii\\nsigii",
+        "8420"
+      ],
+      "port": 8420
+    }
+  ]
+}

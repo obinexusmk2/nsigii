@@ -48,5 +48,8 @@
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
     "vitest": "^4.1.6"
-  }
+  },
+  "repository": { "type": "git", "url": "git+https://github.com/obinexusmk2/nsigii.git" },
+"homepage": "https://github.com/obinexusmk2/nsigii#readme",
+"bugs": "https://github.com/obinexusmk2/nsigii/issues"
 }

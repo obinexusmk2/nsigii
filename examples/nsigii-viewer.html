@@ -327,6 +327,12 @@ function ascii(bytes, off, len) {
   return s;
 }
 
+// Unlike ascii(), does not stop at the first NUL — needed to scan binary
+// payload bytes (e.g. an MP4 tail) for an ASCII marker like ENDNSIGII.
+function rawText(bytes, off, len) {
+  return new TextDecoder("latin1").decode(bytes.subarray(off, off + len));
+}
+
 function payloadKind(version) {
   return version.endsWith("A") ? "ascii" : "video";
 }
@@ -350,7 +356,7 @@ function readHeader(buf) {
   // the extension but is a different layout: byte 7 is 0x07 and it ends with
   // an ENDNSIGII footer. It is still a data-only NSIGII artifact, so show its
   // receipt instead of treating it as an unreadable codec stream.
-  const tail = ascii(bytes, Math.max(0, bytes.length - 4096), Math.min(4096, bytes.length));
+  const tail = rawText(bytes, Math.max(0, bytes.length - 4096), Math.min(4096, bytes.length));
   if (bytes[7] === 0x07 || tail.includes("ENDNSIGII")) {
     if (bytes.length < 369) throw new Error("Constitutional wrapper is shorter than its header.");
     const dv = new DataView(buf);
@@ -405,6 +411,154 @@ async function inflateAll(blobs, onProgress) {
     if (onProgress) onProgress(Math.min(i + BATCH, blobs.length), blobs.length);
   }
   return out;
+}
+
+/* ===========================================================================
+   Constitutional wrapper verify / extract — inlined (not imported) so it
+   works from a bare file:// tab, not just when served over http(s). This is
+   a byte-for-byte copy of ../nsigii-constitutional.mjs (itself a portable
+   mirror of src/core/verify.ts + extract.ts, parity-tested in
+   test/browser-parity.test.ts). Keep the two in sync by hand if either
+   changes — there is no build step wiring this file to that one.
+=========================================================================== */
+const CW_HASH_HEX = 64;
+const CW_SEGMENT_ENTRY_SIZE = 101;
+const CW_TRIDENT = 3;
+const CW_FOOTER_MAGIC = "ENDNSIGII";
+const CW_FOOTER_MAGIC_LEGACY = "ENDSIGII";
+const CW_CLASS = ["NOISE", "NONOISE", "SIGNAL", "NOSIGNAL"];
+const CW_CONSENSUS = { 0xff: "YES", 0x00: "NO", 0x10: "MAYBE" };
+const cwDec = new TextDecoder("latin1");
+const cwAsciiTrim = (b, off, len) => cwDec.decode(b.subarray(off, off + len)).replace(/\0+$/g, "").replace(/\0/g, "");
+async function cwSha256Hex(b) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", b));
+  let s = "";
+  for (const x of d) s += x.toString(16).padStart(2, "0");
+  return s;
+}
+async function cwSha256Raw(b) { return new Uint8Array(await crypto.subtle.digest("SHA-256", b)); }
+const cwToU8 = (x) => x instanceof Uint8Array ? x : new Uint8Array(x);
+function cwU64(dv, off) {
+  const v = dv.getBigUint64(off, true);
+  if (v > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`NSIGII offset too large at ${off}`);
+  return Number(v);
+}
+function cwLastIndexOf(hay, needle) {
+  const n = needle.length;
+  for (let i = hay.length - n; i >= 0; i--) {
+    let ok = true;
+    for (let j = 0; j < n; j++) if (hay[i + j] !== needle.charCodeAt(j)) { ok = false; break; }
+    if (ok) return i;
+  }
+  return -1;
+}
+function inspectWrapperBytes(input) {
+  const b = cwToU8(input);
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  if (cwAsciiTrim(b, 0, 6) !== "NSIGII" || b[6] !== 0x00) throw new Error("Not a constitutional wrapper");
+  let footerPos = cwLastIndexOf(b, CW_FOOTER_MAGIC);
+  let footerLen = CW_FOOTER_MAGIC.length;
+  if (footerPos < 0) { footerPos = cwLastIndexOf(b, CW_FOOTER_MAGIC_LEGACY); footerLen = CW_FOOTER_MAGIC_LEGACY.length; }
+  if (footerPos < 0) throw new Error("NSIGII footer not found");
+  const version = `${b[7]}.${b[8]}.${b[9]}`;
+  const payloadSize = cwU64(dv, 16);
+  const channelTableOffset = cwU64(dv, 25);
+  const segmentTableOffset = cwU64(dv, 33);
+  const payloadOffset = cwU64(dv, 41);
+  const payloadHash = cwAsciiTrim(b, 49, CW_HASH_HEX);
+  const originalFilename = cwAsciiTrim(b, 209, 128) || undefined;
+  const formatHint = cwAsciiTrim(b, 337, 32);
+  for (const [n, o] of [["channelTableOffset", channelTableOffset], ["segmentTableOffset", segmentTableOffset], ["payloadOffset", payloadOffset]]) {
+    if (!Number.isSafeInteger(o) || o < 0 || o >= b.length) throw new Error(`Invalid NSIGII ${n}: ${o}`);
+  }
+  if (payloadOffset + payloadSize > b.length) throw new Error("Invalid NSIGII payload bounds");
+  let off = channelTableOffset;
+  const channelCount = b[24];
+  const channels = [];
+  for (let i = 0; i < channelCount; i++) {
+    const id = b[off++];
+    const roleLen = b[off++];
+    const role = cwAsciiTrim(b, off, roleLen);
+    off += roleLen;
+    const hash = cwAsciiTrim(b, off, CW_HASH_HEX);
+    off += CW_HASH_HEX;
+    const state = CW_CLASS[b[off++]] ?? "NOISE";
+    channels.push({ id, role, hash, state });
+  }
+  off = segmentTableOffset;
+  const segments = [];
+  for (let i = 0; i < CW_TRIDENT; i++) {
+    const segmentId = cwU64(dv, off); off += 8;
+    const channelId = b[off++];
+    off += 8; // timestampNs
+    const segPayloadOffset = cwU64(dv, off); off += 8;
+    const segPayloadSize = cwU64(dv, off); off += 8;
+    const segPayloadHash = cwAsciiTrim(b, off, CW_HASH_HEX); off += CW_HASH_HEX;
+    const rwxFlags = b[off++];
+    const state = CW_CLASS[b[off++]] ?? "NOISE";
+    off += 2;
+    segments.push({ segmentId, channelId, payloadOffset: segPayloadOffset, payloadSize: segPayloadSize, payloadHash: segPayloadHash, rwxFlags, state });
+  }
+  off = segmentTableOffset + CW_TRIDENT * CW_SEGMENT_ENTRY_SIZE;
+  const vSegmentId = cwU64(dv, off); off += 8;
+  const transmitHash = cwAsciiTrim(b, off, CW_HASH_HEX); off += CW_HASH_HEX;
+  const receiveHash = cwAsciiTrim(b, off, CW_HASH_HEX); off += CW_HASH_HEX;
+  const verifyHash = cwAsciiTrim(b, off, CW_HASH_HEX); off += CW_HASH_HEX;
+  const consensus = CW_CONSENSUS[b[off++]] ?? "MAYBE";
+  const consensusScore = dv.getFloat32(off, true); off += 4;
+  off = footerPos + footerLen;
+  off += 8; // segment_count
+  const finalHash = cwAsciiTrim(b, off, CW_HASH_HEX);
+  return {
+    version, originalFilename, formatHint, payloadOffset, payloadSize, payloadHash,
+    channelTableOffset, segmentTableOffset, channels, segments,
+    verification: { segmentId: vSegmentId, transmitHash, receiveHash, verifyHash, consensus, consensusScore },
+    footer: { finalHash },
+  };
+}
+async function verifyWrapperBytes(input) {
+  const b = cwToU8(input);
+  const info = inspectWrapperBytes(b);
+  const payload = b.subarray(info.payloadOffset, info.payloadOffset + info.payloadSize);
+  const recomputedPayloadHash = await cwSha256Hex(payload);
+  const payloadHashMatch = recomputedPayloadHash === info.payloadHash;
+  const channelsBuf = b.subarray(info.channelTableOffset, info.segmentTableOffset);
+  const recomputedChannelHash = await cwSha256Raw(channelsBuf);
+  const roles = ["TRANSMIT", "RECEIVE", "VERIFY"];
+  const vHashes = [info.verification.transmitHash, info.verification.receiveHash, info.verification.verifyHash];
+  const tridentChecks = roles.map((role, i) => {
+    const ch = info.channels[i];
+    const sg = info.segments[i];
+    return ch?.id === i && ch.role === role && ch.hash === recomputedPayloadHash && ch.state === "SIGNAL"
+      && sg?.segmentId === i && sg.channelId === i && sg.payloadHash === recomputedPayloadHash
+      && sg.payloadOffset === info.payloadOffset && sg.payloadSize === info.payloadSize && sg.state === "SIGNAL"
+      && vHashes[i] === recomputedPayloadHash;
+  });
+  const consensusCount = tridentChecks.filter(Boolean).length;
+  const channelHashMatch = consensusCount === 3;
+  const merged = new Uint8Array(payload.length + recomputedChannelHash.length);
+  merged.set(payload, 0);
+  merged.set(recomputedChannelHash, payload.length);
+  const finalHashMatch = (await cwSha256Hex(merged)) === info.footer.finalHash;
+  const rwx = [0b010, 0b100, 0b001];
+  const rwxChainValid = info.segments.length === 3 && info.segments.every((s, i) => s.rwxFlags === rwx[i]);
+  const storedConsensusValid = info.verification.consensus === "YES" && info.verification.consensusScore === 1 && info.verification.segmentId === 2;
+  let consensus = "MAYBE", classification = "NOISE";
+  if (payloadHashMatch && channelHashMatch && finalHashMatch && rwxChainValid && storedConsensusValid) {
+    consensus = "YES"; classification = "SIGNAL";
+  } else if (!payloadHashMatch && !finalHashMatch) {
+    consensus = "NO"; classification = "NOISE";
+  } else {
+    consensus = "MAYBE"; classification = "NOSIGNAL";
+  }
+  return { consensus, classification, payloadHashMatch, channelHashMatch, finalHashMatch, rwxChainValid, tridentChecks, consensusCount };
+}
+async function extractWrapperBytes(input) {
+  const b = cwToU8(input);
+  const result = await verifyWrapperBytes(b);
+  if (result.consensus !== "YES") throw new Error(`NSIGII container did not reach required 3/3 verification consensus (${result.consensusCount}/3) — extraction blocked`);
+  const info = inspectWrapperBytes(b);
+  return { bytes: b.slice(info.payloadOffset, info.payloadOffset + info.payloadSize), originalFilename: info.originalFilename, consensus: result.consensus };
 }
 
 /* ===========================================================================
@@ -664,13 +818,14 @@ async function load(buf, name) {
     badge.textContent = "constitutional wrapper";
     showPlate(`<h2>Constitutional wrapper receipt</h2>
       <p>This data-only container holds a payload and its trident receipt.</p>
-      <p>Use <code>nsigii verify</code> for the full 3/3 cryptographic check, or
-      <code>nsigii extract</code> to restore the payload without executing it.</p>`, false);
+      <p id="verifyLine">Verifying 3/3 trident consensus in this tab&hellip;</p>
+      <p><button id="extractBtn" type="button" hidden>Extract payload</button></p>`, false);
     $("meta").hidden = false;
     $("asciiCtrl").hidden = true;
     $("videoCtrl").hidden = true;
     buildWrapperMeta(header, name);
-    setStatus("wrapper receipt");
+    setStatus("verifying");
+    verifyWrapper(new Uint8Array(buf), header, name);
     return;
   }
   S.kind = payloadKind(header.version);
@@ -734,19 +889,93 @@ async function load(buf, name) {
   S.raf = requestAnimationFrame(tick);
 }
 
-function buildWrapperMeta(h, name) {
+function buildWrapperMeta(h, name, result) {
   $("hdrList").innerHTML = `
     <dt>file</dt><dd>${name}</dd>
     <dt>magic</dt><dd>NSIGII</dd>
     <dt>layout</dt><dd>constitutional wrapper v${h.version}</dd>
     <dt>original</dt><dd>${h.fileName || "unnamed payload"}</dd>
     <dt>format</dt><dd>${h.formatHint || "unknown"}</dd>`;
+  const verifyRows = result ? `
+    <dt>payload hash</dt><dd>${result.payloadHashMatch ? "match" : `<span style="color:var(--drift)">MISMATCH</span>`}</dd>
+    <dt>channel hash</dt><dd>${result.channelHashMatch ? "match" : `<span style="color:var(--drift)">MISMATCH</span>`}</dd>
+    <dt>final hash</dt><dd>${result.finalHashMatch ? "match" : `<span style="color:var(--drift)">MISMATCH</span>`}</dd>
+    <dt>rwx chain</dt><dd>${result.rwxChainValid ? "WRITE→READ→EXECUTE ok" : `<span style="color:var(--drift)">invalid</span>`}</dd>
+    <dt>consensus</dt><dd>${result.consensus} (${result.consensusCount}/3) — ${result.classification}</dd>`
+    : `<dt>consensus</dt><dd>verifying&hellip;</dd>`;
   $("payList").innerHTML = `
     <dt>payload</dt><dd>${h.payloadSize.toLocaleString("en-US")} B</dd>
     <dt>payload hash</dt><dd>${h.payloadHash}</dd>
     <dt>footer</dt><dd>${h.footerFound ? "ENDNSIGII found" : "missing"}</dd>
-    <dt>execution</dt><dd>not performed by this viewer</dd>`;
-  $("chainNote").innerHTML = `This viewer displays the container receipt only. It does not execute or interpret the wrapped payload. Run <code>nsigii verify</code> to require all three trident readings (3/3).`;
+    <dt>execution</dt><dd>not performed by this viewer</dd>
+    ${verifyRows}`;
+  $("chainNote").innerHTML = result
+    ? (result.consensus === "YES"
+      ? `Verified in this tab with <code>crypto.subtle</code> — no CLI needed. All three trident channels (CH0 transmit, CH1 receive, CH2 verify) independently recomputed the payload SHA-256 and the stored receipt agrees.`
+      : `<strong>Verification did not reach 3/3.</strong> Recomputed hashes disagree with the stored receipt, so this payload should be treated as untrusted. <code>nsigii verify</code> on the CLI will show the same result.`)
+    : `Verifying in this tab (SHA-256 via <code>crypto.subtle</code>, no CLI needed)&hellip;`;
+}
+
+/* Runs the same trident check as `nsigii verify`, in-browser, using the
+   inlined verifyWrapperBytes() above (mirrors src/core/verify.ts). */
+async function verifyWrapper(bytes, header, name) {
+  const line = $("verifyLine");
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    setStatus("verify unavailable");
+    if (line) line.innerHTML = `<strong style="color:var(--drift)">crypto.subtle is unavailable in this context.</strong> ` +
+      `Run <code>nsigii verify ${JSON.stringify(name)}</code> from the CLI instead.`;
+    return;
+  }
+  let result;
+  try {
+    result = await verifyWrapperBytes(bytes);
+  } catch (err) {
+    setStatus("verify error");
+    if (line) line.innerHTML = `<strong style="color:var(--drift)">Verification threw:</strong> ${err.message}`;
+    return;
+  }
+  const ok = result.consensus === "YES";
+  if (line) {
+    line.innerHTML = ok
+      ? `<strong style="color:var(--verified)">Verified in this tab: 3/3 trident consensus (SIGNAL).</strong>`
+      : result.consensus === "NO"
+        ? `<strong style="color:var(--drift)">Tampered — consensus NO (NOISE). Do not trust this payload.</strong>`
+        : `<strong style="color:var(--drift)">Uncertain — ${result.consensusCount}/3 channels agreed (NOSIGNAL).</strong>`;
+  }
+  setStatus(ok ? "verified 3/3" : "verification failed");
+  buildWrapperMeta(header, name, result);
+  document.querySelectorAll("#chain .node").forEach((el, i) => {
+    el.classList.toggle("live", Boolean(result.tridentChecks[i]));
+  });
+  const btn = $("extractBtn");
+  if (btn && ok) {
+    btn.hidden = false;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = "Extracting…";
+      try {
+        const extracted = await extractWrapperBytes(bytes);
+        const blob = new Blob([extracted.bytes]);
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = extracted.originalFilename || header.fileName ||
+          (name.endsWith(".nsigii") ? name.slice(0, -7) : name + ".extracted");
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+        btn.textContent = "Extracted ✓";
+      } catch (err) {
+        btn.textContent = "Extract failed";
+        btn.disabled = false;
+        console.error(err);
+        return;
+      }
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = prev; }, 2000);
+    });
+  }
 }
 
 function buildMeta(h, blobs, frames, name) {
